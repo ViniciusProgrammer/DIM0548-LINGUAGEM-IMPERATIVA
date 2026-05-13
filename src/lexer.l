@@ -1,6 +1,17 @@
 %{
   #include <stdio.h>  
+
+  int linha_atual = 1;
 %}
+
+/* Definições */
+ESPACO      [ \t\r]+
+DIGITO      [0-9]
+LETRA       [a-zA-Z]
+ID          {LETRA}({LETRA}|{DIGITO}|_)*
+INTEIRO     {DIGITO}+
+REAL        {DIGITO}+"."{DIGITO}+
+TEXTO       \"([^\\\"]|\\.)*\"
 
 %%
 
