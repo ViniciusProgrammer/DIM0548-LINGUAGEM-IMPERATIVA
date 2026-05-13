@@ -1,4 +1,4 @@
-# DIM0548-LINGUAGEM-IMPARATIVA
+# DIM0548-LINGUAGEM-IMPERATIVA
 
 Analisador léxico desenvolvido para a disciplina de **DIM0548 - Engenharia de Linguagens**. O analisador identifica palavras reservadas, tipos, variáveis e captura erros léxicos com mensagens amigáveis.
 
