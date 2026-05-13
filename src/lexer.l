@@ -59,6 +59,9 @@ TEXTO       \"([^\\\"]|\\.)*\"
 "/"                 { printf("OP_DIVISAO\n"); }
 "="                 { printf("SINAL_IGUALDADE\n"); }
 "=="                { printf("OP_IGUAL\n"); }
+"&&"                { printf("OP_LOGICO_E\n"); }
+"||"                { printf("OP_LOGICO_OU\n"); }
+"!"                 { printf("OP_LOGICO_NAO\n"); }
 "!="                { printf("OP_DIFERENTE\n"); }
 ">"                 { printf("OP_MAIOR\n"); }
 "<"                 { printf("OP_MENOR\n"); }
