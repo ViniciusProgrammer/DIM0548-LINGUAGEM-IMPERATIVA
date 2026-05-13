@@ -1,0 +1,14 @@
+inicio
+  Inteiro numero
+  Texto palavra
+  Real nota
+  
+  // Testando estruturas de controle
+  se Verdadeiro entao
+    enquanto Falso faca
+      numero
+    fim_enquanto
+  fim_se
+  
+  @
+fim
