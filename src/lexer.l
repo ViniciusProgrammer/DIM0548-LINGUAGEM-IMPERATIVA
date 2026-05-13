@@ -20,7 +20,7 @@ TEXTO       \"([^\\\"]|\\.)*\"
 "\n"                { linha_atual++; /* Conta quebras de linha */ }
 
 /* Comentários */
-"//".*              { printf("COMENTARIO_LINHA_IGNORADO\n"); }
+\/\/.* { printf("COMENTARIO_LINHA_IGNORADO\n"); }
 "/*"([^*]|(\*+[^*/]))*\*+"/" { printf("COMENTARIO_BLOCO_IGNORADO\n"); }
 
 /* Palavras Reservadas */
@@ -38,6 +38,20 @@ TEXTO       \"([^\\\"]|\\.)*\"
 "procedimento"      { printf("PROCEDIMENTO\n"); }
 "funcao"            { printf("FUNCAO\n"); }
 "retorne"           { printf("RETORNE\n"); }
+
+/* Tipos Primitivos */
+"Inteiro"           { printf("TIPO_INTEIRO\n"); }
+"Real"              { printf("TIPO_REAL\n"); }
+"Texto"             { printf("TIPO_TEXTO\n"); }
+"Booleano"          { printf("TIPO_BOOLEANO\n"); }
+"constante"         { printf("CONSTANTE\n"); }
+
+/* Literais */
+"Verdadeiro"        { printf("LITERAL_BOOLEANO(Verdadeiro)\n"); }
+"Falso"             { printf("LITERAL_BOOLEANO(Falso)\n"); }
+{REAL}              { printf("LITERAL_REAL(%s)\n", yytext); }
+{INTEIRO}           { printf("LITERAL_INTEIRO(%s)\n", yytext); }
+{TEXTO}             { printf("LITERAL_TEXTO(%s)\n", yytext); }
 
 %%
 
