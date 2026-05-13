@@ -36,6 +36,7 @@ TEXTO       \"([^\\\"]|\\.)*\"
 "procedimento"      { printf("PROCEDIMENTO\n"); }
 "funcao"            { printf("FUNCAO\n"); }
 "retorne"           { printf("RETORNE\n"); }
+"ref"               { printf("MODIFICADOR_REF\n"); }
 
  /* Tipos Primitivos */
 "Inteiro"           { printf("TIPO_INTEIRO\n"); }

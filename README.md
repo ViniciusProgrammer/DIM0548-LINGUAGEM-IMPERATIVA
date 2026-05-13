@@ -20,5 +20,5 @@ chmod +x compilar.sh
 Para rodar o analisador usando o arquivo de teste:
 
 ```bash
-./analisador_lexico < testes/teste.edu
+./analisador_lexico < testes/quisort.edu
 ```
