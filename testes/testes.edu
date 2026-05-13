@@ -4,8 +4,8 @@ inicio
   Real nota
   
   // Testando estruturas de controle
-  se Verdadeiro entao
-    enquanto Falso faca
+  se Verdadeiro inicio
+    enquanto Falso inicio
       numero
     fim_enquanto
   fim_se
