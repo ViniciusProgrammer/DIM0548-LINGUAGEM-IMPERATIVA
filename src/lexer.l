@@ -25,11 +25,9 @@ TEXTO       \"([^\\\"]|\\.)*\"
 
  /* Palavras Reservadas */
 "se"                { printf("SE\n"); }
-"entao"             { printf("ENTAO\n"); }
 "senao"             { printf("SENAO\n"); }
 "fim_se"            { printf("FIM_SE\n"); }
 "enquanto"          { printf("ENQUANTO\n"); }
-"faca"              { printf("FACA\n"); }
 "fim_enquanto"      { printf("FIM_ENQUANTO\n"); }
 "repetir"           { printf("REPETIR\n"); }
 "ate"               { printf("ATE\n"); }
@@ -38,7 +36,6 @@ TEXTO       \"([^\\\"]|\\.)*\"
 "procedimento"      { printf("PROCEDIMENTO\n"); }
 "funcao"            { printf("FUNCAO\n"); }
 "retorne"           { printf("RETORNE\n"); }
-.                   {printf("Charactere Invalido.\n");}
 
  /* Tipos Primitivos */
 "Inteiro"           { printf("TIPO_INTEIRO\n"); }
@@ -54,9 +51,34 @@ TEXTO       \"([^\\\"]|\\.)*\"
 {INTEIRO}           { printf("LITERAL_INTEIRO(%s)\n", yytext); }
 {TEXTO}             { printf("LITERAL_TEXTO(%s)\n", yytext); }
 
+ /* Operadores e Pontuação */
+"+"                 { printf("OP_SOMA\n"); }
+"-"                 { printf("OP_SUBTRACAO\n"); }
+"*"                 { printf("OP_MULTIPLICACAO\n"); }
+"/"                 { printf("OP_DIVISAO\n"); }
+"="                 { printf("SINAL_IGUALDADE\n"); }
+"=="                { printf("OP_IGUAL\n"); }
+"!="                { printf("OP_DIFERENTE\n"); }
+">"                 { printf("OP_MAIOR\n"); }
+"<"                 { printf("OP_MENOR\n"); }
+">="                { printf("OP_MAIOR_IGUAL\n"); }
+"<="                { printf("OP_MENOR_IGUAL\n"); }
+";"                 { printf("PONTO_E_VIRGULA\n"); }
+","                 { printf("VIRGULA\n"); }
+":"                 { printf("DOIS_PONTOS\n"); }
+"->"                { printf("SETA_RETORNO\n"); }
+"("                 { printf("ABRE_PARENTESES\n"); }
+")"                 { printf("FECHA_PARENTESES\n"); }
+"["                 { printf("ABRE_COLCHETES\n"); }
+"]"                 { printf("FECHA_COLCHETES\n"); }
+"{"                 { printf("ABRE_CHAVES\n"); }
+"}"                 { printf("FECHA_CHAVES\n"); }
+
  /* Identificadores */
 {ID}                { printf("IDENTIFICADOR(%s)\n", yytext); }
 
+ /* Charactere Invalido */
+.                   {printf("Charactere Invalido.\n");}
 
 %%
 
