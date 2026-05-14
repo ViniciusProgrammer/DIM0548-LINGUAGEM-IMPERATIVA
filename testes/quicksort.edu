@@ -5,13 +5,13 @@ procedimento Trocar (ref vetor: Inteiro[], i: Inteiro, j: Inteiro) inicio
     vetor[j] = aux
 fim
 
-// FUNÇÃO PARA PARTICIONAR O VETOR
+// FUNCAO PARA PARTICIONAR O VETOR
 funcao Particionar (ref vetor: Inteiro[], inicio_vetor: Inteiro, fim_vetor: Inteiro) ->
 Inteiro inicio
     pivo: Inteiro = vetor[fim_vetor]
     i: Inteiro = inicio_vetor - 1
     j: Inteiro = inicio_vetor
-    
+
     enquanto (j < fim_vetor) inicio
         se (vetor[j] <= pivo) inicio
             i = i + 1
@@ -21,7 +21,7 @@ Inteiro inicio
     fim_enquanto
 
     Trocar(vetor, i + 1, fim_vetor)
-    retornar (i + 1)
+    retorne (i + 1)
 fim
 
 // PROCEDIMENTO RECURSIVO DO QUICKSORT
@@ -41,5 +41,6 @@ procedimento main() inicio
     tamanho: Inteiro
     cont: Inteiro = 1
 
-    Escrever("Quantos números deseja ordenar (limite de 100)?")
+    Escrever("Quantos numeros deseja ordenar (limite de 100)?")
     tamanho = LerInteiro()
+fim

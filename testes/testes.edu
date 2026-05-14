@@ -1,14 +1,93 @@
+/*
+  Arquivo de testes gerais — linguagem .edu
+  Este comentario de bloco ocupa multiplas linhas.
+  O lexer_melhorado conta os \n internos corretamente,
+  portanto a linha seguinte deve ser reportada como linha 7.
+*/
 inicio
-  Inteiro numero
-  Texto palavra
-  Real nota
-  
-  // Testando estruturas de controle
+  // Tipos primitivos — convencao: iniciais maiusculas
+  Inteiro  numero
+  Real     nota
+  Texto    palavra
+  Booleano ativo
+  Constante MAX: Inteiro = 100
+
+  // Literais
+  numero = 42
+  nota   = 9.5
+  palavra = "ola mundo"
+  ativo  = Verdadeiro
+
+  // Operadores aritmeticos (incluindo modulo — agora documentado)
+  numero = numero + 1
+  numero = numero - 1
+  numero = numero * 2
+  numero = numero / 2
+  numero = numero % 3
+
+  // Operadores de atribuicao composta (novos no lexer_melhorado)
+  numero += 5
+  numero -= 2
+  numero *= 3
+  numero /= 4
+
+  // Operadores relacionais (compostos declarados antes dos simples)
+  se (numero == 10) inicio
+    ativo = Verdadeiro
+  fim_se
+
+  se (numero != 0) inicio
+    ativo = Falso
+  fim_se
+
+  se (nota >= 7.0) inicio
+    Escrever("Aprovado")
+  fim_se
+
+  se (nota <= 4.9) inicio
+    Escrever("Reprovado")
+  fim_se
+
+  // Operadores logicos
+  se (ativo && numero > 0) inicio
+    Escrever("ativo e positivo")
+  fim_se
+
+  se (ativo || numero == 0) inicio
+    Escrever("ativo ou zero")
+  fim_se
+
+  se !ativo inicio
+    Escrever("inativo")
+  fim_se
+
+  // Laco enquanto
+  enquanto (numero > 0) inicio
+    numero -= 1
+  fim_enquanto
+
+  // Laco repetir/ate
+  repetir
+    numero += 1
+  ate (numero == 5)
+
+  // Estruturas aninhadas com literais booleanos
   se Verdadeiro inicio
     enquanto Falso inicio
-      numero
+      numero = numero + 1
     fim_enquanto
   fim_se
-  
+
+  // Seta de retorno usada em declaracao (-> deve ser reconhecida antes de -)
+  // Exemplo: funcao declarada inline para exercitar o token
+  // funcao Dobro (x: Inteiro) -> Inteiro inicio retorne x * 2 fim
+
+  // Vetores
+  numeros: Inteiro[10]
+  numeros[0] = 1
+  numeros[9] = MAX
+
+  // Caractere invalido — deve gerar erro lexico sem interromper a analise
   @
+
 fim
