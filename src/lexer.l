@@ -57,11 +57,6 @@ TEXTO       \"([^\\\"\n]|\\.)*\"
 "funcao"        { TOKEN("FUNCAO", ""); }
 
 "retorne"       { TOKEN("RETORNE", ""); }
-"retornar"      {
-    fprintf(stderr, "[AVISO L%d:C%d] 'retornar' e forma deprecada; use 'retorne'\n",
-            linha_atual, coluna_atual);
-    TOKEN("RETORNE", " /* depreciado: retornar */");
-}
 
 "ref"           { TOKEN("MODIFICADOR_REF", ""); }
 
@@ -71,11 +66,6 @@ TEXTO       \"([^\\\"\n]|\\.)*\"
 "Booleano"      { TOKEN("TIPO_BOOLEANO", ""); }
 
 "Constante"     { TOKEN("CONSTANTE", ""); }
-"constante"     {
-    fprintf(stderr, "[AVISO L%d:C%d] Prefira 'Constante' (com maiuscula) para consistencia com outros tipos\n",
-            linha_atual, coluna_atual);
-    TOKEN("CONSTANTE", " /* convencao: use Constante */");
-}
 
 "Verdadeiro"    { TOKEN("LITERAL_BOOLEANO", "(%s)", yytext); }
 "Falso"         { TOKEN("LITERAL_BOOLEANO", "(%s)", yytext); }
