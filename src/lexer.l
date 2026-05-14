@@ -36,6 +36,7 @@ TEXTO       \"([^\\\"]|\\.)*\"
 "procedimento"      { printf("PROCEDIMENTO\n"); }
 "funcao"            { printf("FUNCAO\n"); }
 "retorne"           { printf("RETORNE\n"); }
+"retornar"          { printf("RETORNE\n"); }
 "ref"               { printf("MODIFICADOR_REF\n"); }
 
  /* Tipos Primitivos */
@@ -57,6 +58,7 @@ TEXTO       \"([^\\\"]|\\.)*\"
 "-"                 { printf("OP_SUBTRACAO\n"); }
 "*"                 { printf("OP_MULTIPLICACAO\n"); }
 "/"                 { printf("OP_DIVISAO\n"); }
+"%"                 { printf("OP_MODULO\n"); }
 "="                 { printf("SINAL_IGUALDADE\n"); }
 "=="                { printf("OP_IGUAL\n"); }
 "&&"                { printf("OP_LOGICO_E\n"); }
@@ -82,7 +84,7 @@ TEXTO       \"([^\\\"]|\\.)*\"
 {ID}                { printf("IDENTIFICADOR(%s)\n", yytext); }
 
  /* Charactere Invalido */
-.                   {printf("Charactere Invalido.\n");}
+.                   { printf("Charactere Invalido '%s' na linha %d.\n", yytext, linha_atual); }
 
 %%
 
