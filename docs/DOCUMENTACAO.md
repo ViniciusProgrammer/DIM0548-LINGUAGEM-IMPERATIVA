@@ -468,6 +468,6 @@ Arquivo de verificação abrangente. Contém:
 
 - [Manual do Flex — GNU Project](https://www.gnu.org/software/flex/manual/)
 - [Compiladores: Princípios, Técnicas e Ferramentas — Aho, Lam, Sethi, Ullman](https://en.wikipedia.org/wiki/Compilers:_Principles,_Techniques,_and_Tools) *(Livro do Dragão)*
-- Disciplina DIM0548 — Engenharia de Linguagens, UFRN
+- Disciplina DIM0548 — Engenharia de Linguagens, UFRN - 2026
 
 ---
