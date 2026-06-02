@@ -1,17 +1,15 @@
 %{
   #include <stdio.h>
+  #include "y.tab.h" // Arquivo gerado pelo Bison com a lista de tokens
 
   int linha_atual  = 1;
   int coluna_atual = 1;
-  int total_tokens = 0;
-  int total_erros  = 0;
 
-  /* Emite token com posição e incrementa contador */
-  #define TOKEN(nome, fmt, ...) \
+  /* Atualiza a coluna e retorna o token para o Bison */
+  #define RETORNA(token) \
     do { \
-      printf("[L%d:C%d] " nome fmt "\n", linha_atual, coluna_atual, ##__VA_ARGS__); \
       coluna_atual += yyleng; \
-      total_tokens++; \
+      return token; \
     } while(0)
 %}
 
@@ -34,11 +32,9 @@ TEXTO       \"([^\\\"\n]|\\.)*\"
 
  /* ---- Comentários ---- */
 \/\/.* { 
-    /* Comentário de Linha */
     coluna_atual += yyleng; 
 }
 \/\*([^*]|(\*+[^*\/]))*\*+\/ { 
-    /* Comentário de Bloco (Avança as quebras de linha e colunas internas) */
     for(int i = 0; yytext[i] != '\0'; i++) {
         if(yytext[i] == '\n') {
             linha_atual++;
@@ -50,94 +46,76 @@ TEXTO       \"([^\\\"\n]|\\.)*\"
 }
 
  /* ---- Palavras Reservadas ---- */
-"se"            { TOKEN("SE", ""); }
-"senao"         { TOKEN("SENAO", ""); }
-"fim_se"        { TOKEN("FIM_SE", ""); }
-"enquanto"      { TOKEN("ENQUANTO", ""); }
-"fim_enquanto"  { TOKEN("FIM_ENQUANTO", ""); }
-"repetir"       { TOKEN("REPETIR", ""); }
-"ate"           { TOKEN("ATE", ""); }
-"inicio"        { TOKEN("INICIO", ""); }
-"fim"           { TOKEN("FIM", ""); }
-"procedimento"  { TOKEN("PROCEDIMENTO", ""); }
-"funcao"        { TOKEN("FUNCAO", ""); }
-"retorne"       { TOKEN("RETORNE", ""); }
-"ref"           { TOKEN("MODIFICADOR_REF", ""); }
+"main"          { RETORNA(MAIN); }
+"se"            { RETORNA(SE); }
+"senao"         { RETORNA(SENAO); }
+"fim_se"        { RETORNA(FIM_SE); }
+"enquanto"      { RETORNA(ENQUANTO); }
+"fim_enquanto"  { RETORNA(FIM_ENQUANTO); }
+"repetir"       { RETORNA(REPETIR); }
+"ate"           { RETORNA(ATE); }
+"inicio"        { RETORNA(INICIO); }
+"fim"           { RETORNA(FIM); }
+"procedimento"  { RETORNA(PROCEDIMENTO); }
+"funcao"        { RETORNA(FUNCAO); }
+"retorne"       { RETORNA(RETORNE); }
+"ref"           { RETORNA(MODIFICADOR_REF); }
 
  /* ---- Tipos Primitivos ---- */
-"Inteiro"       { TOKEN("TIPO_INTEIRO", ""); }
-"Real"          { TOKEN("TIPO_REAL", ""); }
-"Texto"         { TOKEN("TIPO_TEXTO", ""); }
-"Booleano"      { TOKEN("TIPO_BOOLEANO", ""); }
-"Constante"     { TOKEN("CONSTANTE", ""); }
+"Inteiro"       { RETORNA(TIPO_INTEIRO); }
+"Real"          { RETORNA(TIPO_REAL); }
+"Texto"         { RETORNA(TIPO_TEXTO); }
+"Booleano"      { RETORNA(TIPO_BOOLEANO); }
+"Constante"     { RETORNA(CONSTANTE); }
 
  /* ---- Literais ---- */
-"Verdadeiro"    { TOKEN("LITERAL_BOOLEANO", "(%s)", yytext); }
-"Falso"         { TOKEN("LITERAL_BOOLEANO", "(%s)", yytext); }
-{REAL}          { TOKEN("LITERAL_REAL",     "(%s)", yytext); }
-{INTEIRO}       { TOKEN("LITERAL_INTEIRO",  "(%s)", yytext); }
-{TEXTO}         { TOKEN("LITERAL_TEXTO",    "(%s)", yytext); }
+"Verdadeiro"    { RETORNA(LITERAL_BOOLEANO); }
+"Falso"         { RETORNA(LITERAL_BOOLEANO); }
+{REAL}          { RETORNA(LITERAL_REAL); }
+{INTEIRO}       { RETORNA(LITERAL_INTEIRO); }
+{TEXTO}         { RETORNA(LITERAL_TEXTO); }
 
  /* ---- Operadores e Pontuação ---- */
-"+"             { TOKEN("OP_SOMA", ""); }
-"-"             { TOKEN("OP_SUBTRACAO", ""); }
-"*"             { TOKEN("OP_MULTIPLICACAO", ""); }
-"/"             { TOKEN("OP_DIVISAO", ""); }
-"%"             { TOKEN("OP_MODULO", ""); }
-"="             { TOKEN("SINAL_IGUALDADE", ""); }
-">"             { TOKEN("OP_MAIOR", ""); }
-"<"             { TOKEN("OP_MENOR", ""); }
-"&&"            { TOKEN("OP_LOGICO_E", ""); }
-"||"            { TOKEN("OP_LOGICO_OU", ""); }
-"!"             { TOKEN("OP_LOGICO_NAO", ""); }
-"=="            { TOKEN("OP_IGUAL", ""); }
-"!="            { TOKEN("OP_DIFERENTE", ""); }
-">="            { TOKEN("OP_MAIOR_IGUAL", ""); }
-"<="            { TOKEN("OP_MENOR_IGUAL", ""); }
-"->"            { TOKEN("SETA_RETORNO", ""); }
-"+="            { TOKEN("OP_ATRIB_SOMA", ""); }
-"-="            { TOKEN("OP_ATRIB_SUB", ""); }
-"*="            { TOKEN("OP_ATRIB_MUL", ""); }
-"/="            { TOKEN("OP_ATRIB_DIV", ""); }
+"+"             { RETORNA(OP_SOMA); }
+"-"             { RETORNA(OP_SUBTRACAO); }
+"*"             { RETORNA(OP_MULTIPLICACAO); }
+"/"             { RETORNA(OP_DIVISAO); }
+"%"             { RETORNA(OP_MODULO); }
+"="             { RETORNA(SINAL_IGUALDADE); }
+">"             { RETORNA(OP_MAIOR); }
+"<"             { RETORNA(OP_MENOR); }
+"&&"            { RETORNA(OP_LOGICO_E); }
+"||"            { RETORNA(OP_LOGICO_OU); }
+"!"             { RETORNA(OP_LOGICO_NAO); }
+"=="            { RETORNA(OP_IGUAL); }
+"!="            { RETORNA(OP_DIFERENTE); }
+">="            { RETORNA(OP_MAIOR_IGUAL); }
+"<="            { RETORNA(OP_MENOR_IGUAL); }
+"->"            { RETORNA(SETA_RETORNO); }
+"+="            { RETORNA(OP_ATRIB_SOMA); }
+"-="            { RETORNA(OP_ATRIB_SUB); }
+"*="            { RETORNA(OP_ATRIB_MUL); }
+"/="            { RETORNA(OP_ATRIB_DIV); }
 
  /* ---- Delimitadores ---- */
-";"             { TOKEN("PONTO_E_VIRGULA", ""); }
-","             { TOKEN("VIRGULA", ""); }
-":"             { TOKEN("DOIS_PONTOS", ""); }
-"("             { TOKEN("ABRE_PARENTESES", ""); }
-")"             { TOKEN("FECHA_PARENTESES", ""); }
-"["             { TOKEN("ABRE_COLCHETES", ""); }
-"]"             { TOKEN("FECHA_COLCHETES", ""); }
-"{"             { TOKEN("ABRE_CHAVES", ""); }
-"}"             { TOKEN("FECHA_CHAVES", ""); }
+";"             { RETORNA(PONTO_E_VIRGULA); }
+","             { RETORNA(VIRGULA); }
+":"             { RETORNA(DOIS_PONTOS); }
+"("             { RETORNA(ABRE_PARENTESES); }
+")"             { RETORNA(FECHA_PARENTESES); }
+"["             { RETORNA(ABRE_COLCHETES); }
+"]"             { RETORNA(FECHA_COLCHETES); }
+"{"             { RETORNA(ABRE_CHAVES); }
+"}"             { RETORNA(FECHA_CHAVES); }
 
  /* ---- Identificadores ---- */
-{ID}            { TOKEN("IDENTIFICADOR", "(%s)", yytext); }
+{ID}            { RETORNA(IDENTIFICADOR); }
 
  /* ---- Erro léxico ---- */
 .               {
     fprintf(stderr, "[ERRO L%d:C%d] Caractere invalido: '%s'\n",
             linha_atual, coluna_atual, yytext);
     coluna_atual++;
-    total_erros++;
 }
 
 %%
-
-#ifndef yywrap
-int yywrap(void) { return 1; }
-#endif
-
-int main(void) {
-    yylex();
-
-    printf("\n--- Analise concluida ---\n");
-    printf("Linhas processadas : %d\n", linha_atual);
-    printf("Tokens reconhecidos: %d\n", total_tokens);
-    if (total_erros > 0)
-        fprintf(stderr, "Erros lexicos      : %d\n", total_erros);
-    else
-        printf("Erros lexicos      : 0\n");
-
-    return (total_erros > 0) ? 1 : 0;
-}

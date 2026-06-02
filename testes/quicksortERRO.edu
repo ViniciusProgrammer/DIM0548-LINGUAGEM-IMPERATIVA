@@ -1,0 +1,51 @@
+// PROCEDIMENTO AUXILIAR PARA TROCA DE VALORES
+procedimento Trocar (ref vetor: Inteiro[], i: Inteiro, j: Inteiro) inicio
+    // ERRO 1: Falta o ':' na declaração da variável aux
+    aux Inteiro = vetor[i]
+    vetor[i] = vetor[j]
+    vetor[j] = aux
+fim
+
+// FUNCAO PARA PARTICIONAR O VETOR
+funcao Particionar (ref vetor: Inteiro[], inicio_vetor: Inteiro, fim_vetor: Inteiro) -> Inteiro inicio
+    pivo: Inteiro = vetor[fim_vetor]
+    i: Inteiro = inicio_vetor - 1
+    j: Inteiro = inicio_vetor
+
+    // ERRO 2: Falta o ')' fechando a condição do enquanto
+    enquanto (j < fim_vetor inicio
+        
+        // ERRO 3: Falta a palavra 'inicio' para abrir o bloco do 'se'
+        se (vetor[j] <= pivo) 
+            i = i + 1
+            Trocar(vetor, i, j)
+        fim_se
+        
+        j = j + 1
+    fim_enquanto
+
+    Trocar(vetor, i + 1, fim_vetor)
+    retorne (i + 1)
+fim
+
+// PROCEDIMENTO RECURSIVO DO QUICKSORT
+procedimento QuickSort (ref vetor: Inteiro[], inicio_vetor: Inteiro, fim_vetor: Inteiro) inicio
+    se (inicio_vetor < fim_vetor) inicio
+        pivo: Inteiro = Particionar(vetor, inicio_vetor, fim_vetor)
+
+        // ERRO 4: Falta a vírgula separando o primeiro e o segundo argumento
+        QuickSort(vetor inicio_vetor, pivo - 1)
+        QuickSort(vetor, pivo + 1, fim_vetor)
+    fim_se
+fim
+
+// PROGRAMA PRINCIPAL
+procedimento main() inicio
+    numeros: Inteiro[100]
+    // ERRO 5: Um operador '+' solto no meio do nada, sem termo à direita
+    tamanho: Inteiro +
+    cont: Inteiro = 1
+
+    Escrever("Quantos numeros deseja ordenar (limite de 100)?")
+    tamanho = LerInteiro()
+fim
