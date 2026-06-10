@@ -18,24 +18,20 @@
 8. [Especificação do Analisador Léxico](#8-especificação-do-analisador-léxico)
 9. [Tokens Reconhecidos](#9-tokens-reconhecidos)
 10. [Tratamento de Erros Léxicos](#10-tratamento-de-erros-léxicos)
-11. [Exemplos de Saída](#11-exemplos-de-saída)
-12. [Arquivos de Teste](#12-arquivos-de-teste)
-13. [Referências](#13-referências)
+11. [Especificação do Analisador Sintático](#11-especificação-do-analisador-sintático)
+12. [Tratamento de Erros Sintáticos](#12-tratamento-de-erros-sintáticos)
+13. [Exemplos de Saída](#13-exemplos-de-saída)
+14. [Arquivos de Teste](#14-arquivos-de-teste)
+15. [Referências](#15-referências)
 
 ---
 
 ## 1. Visão Geral
 
-Este projeto implementa um **analisador léxico** (*lexer* / *scanner*) para uma linguagem imperativa educacional chamada `.edu`. O analisador foi desenvolvido como trabalho prático da disciplina **DIM0548 — Engenharia de Linguagens** e representa a **primeira fase de um compilador**: a leitura do código-fonte para identificar e classificar unidades léxicas chamadas de **tokens**.
+Este projeto implementa as duas primeiras fases de um compilador (o **Analisador Léxico** e o **Analisador Sintático**) para uma linguagem imperativa educacional chamada `.edu`. O projeto foi desenvolvido como trabalho prático da disciplina **DIM0548 — Engenharia de Linguagens**.
 
-O lexer é capaz de:
-
-- Reconhecer **palavras reservadas**, **tipos primitivos**, **literais** e **identificadores** da linguagem `.edu`
-- Identificar todos os **operadores** (aritméticos, de atribuição composta, lógicos e relacionais) e **delimitadores**
-- Processar **comentários** de linha e de bloco sem emitir tokens, **contando corretamente as quebras de linha internas** aos comentários de bloco
-- **Rastrear linha e coluna** durante a análise via variáveis `linha_atual` e `coluna_atual`
-- Reportar **erros léxicos** com posição exata (`[L:C]`) e continuar a análise
-- Exibir um **sumário** ao final: total de tokens reconhecidos, linhas processadas e erros encontrados
+- **Fase 1 (Léxica):** Lê o código-fonte e agrupa os caracteres em unidades lógicas chamadas **tokens** (palavras reservadas, identificadores, operadores).
+- **Fase 2 (Sintática):** Recebe esses tokens e verifica se eles formam frases válidas de acordo com a **gramática** da linguagem, garantindo a ordem estrutural (ex: um `se` deve ter um `fim_se`).
 
 ---
 
@@ -45,14 +41,18 @@ O lexer é capaz de:
 DIM0548-LINGUAGEM-IMPERATIVA/
 │
 ├── src/
-│   ├── lexer.l          # Especificação do analisador (Flex) — arquivo principal
-│   └── lex.yy.c         # Código C gerado automaticamente pelo Flex (não editar)
+│   ├── lexer.l          # Especificação do analisador léxico (Flex)
+│   ├── parser.y         # Especificação do analisador sintático (Bison)
+│   ├── lex.yy.c         # Código gerado pelo Flex (não editar)
+│   ├── y.tab.c          # Código C gerado pelo Bison (não editar)
+│   └── y.tab.h          # Cabeçalho gerado pelo Bison com a lista de tokens
 │
 ├── docs/                # Documentação adicional
 │
 ├── testes/
-│   ├── quicksort.edu    # Programa QuickSort na linguagem .edu
-│   └── testes.edu       # Arquivo de teste de estruturas, operadores e erros léxicos
+│   ├── quicksort.edu       # Programa QuickSort válido
+│   ├── quicksortERRO.edu   # Programa com erros sintáticos para validação
+│   └── testes.edu          # Arquivo de teste de estruturas gerais
 │
 ├── compilar.sh          # Script de build automatizado
 ├── .gitignore
@@ -66,8 +66,15 @@ DIM0548-LINGUAGEM-IMPERATIVA/
 | Ferramenta | Função |
 |---|---|
 | **Flex** | Gerador de analisadores léxicos a partir de regras definidas no arquivo `.l` |
+| **Bison** |	Gerador do analisador sintático (LALR) a partir de regras gramaticais `.y` |
 | **GCC** | Compilador C que transforma o código gerado pelo Flex em executável binário |
 | **Bash** | Automatiza o processo de build no script `compilar.sh` |
+
+**Distribuição de linguagens no repositório:**
+
+- Yacc (`.y`): **51,4%**
+- Lex (`.l`): **38,0%**
+- Shell (`.sh`): **10,6%**
 
 ---
 
@@ -77,63 +84,62 @@ O projeto foi desenvolvido para **Linux**. É necessário ter o **Flex** e o **G
 
 **Ubuntu / Debian:**
 ```bash
-sudo apt update && sudo apt install flex gcc -y
+sudo apt update && sudo apt install flex bison gcc -y
 ```
 
 **Arch Linux:**
 ```bash
-sudo pacman -S flex gcc
+sudo pacman -S flex bison gcc
 ```
 
 **Fedora / RHEL:**
 ```bash
-sudo dnf install flex gcc
+sudo dnf install flex bison gcc
 ```
 
 ---
 
 ## 5. Como Compilar
 
-O script `compilar.sh` automatiza todo o processo de build:
+O script `compilar.sh` automatiza todo o processo de build integrando Flex e Bison:
 
 ```bash
-# Passo 1: Flex gera o código C a partir das regras do lexer
-flex -o src/lex.yy.c src/lexer.l
-
-# Passo 2: GCC compila o código C gerado em executável
-# -lfl linka a biblioteca do Flex (necessária em algumas distribuições)
-# -Wall ativa todos os avisos de compilação
-gcc -Wall src/lex.yy.c -o analisador_lexico -lfl
-```
-
-**Para executar:**
-
-```bash
+# Na raiz do repositório, dê permissão de execução (apenas a primeira vez):
 chmod +x compilar.sh
+
+# Execute o script:
 ./compilar.sh
 ```
+
+O que o script faz:
+1. Roda o `bison -d` para gerar o parser e a lista de tokens (`y.tab.h`).
+2. Roda o `flex` para gerar o scanner.
+3. Usa o `gcc` para juntar ambos no executável `analisador_sintatico`.
 
 ---
 
 ## 6. Como Testar
 
-O analisador lê o código-fonte pela **entrada padrão** (`stdin`):
+O analisador lê o código-fonte pela **entrada padrão** (`stdin`). Use a redireção `<` para passar um arquivo:
 
 ```bash
-./analisador_lexico < testes/quicksort.edu
+# Testar código válido (Deve exibir SUCESSO)
+./analisador_sintatico < testes/quicksort.edu
+
+# Testar código inválido (Deve acusar ERRO SINTÁTICO)
+./analisador_sintatico < testes/quicksortERRO.edu
+
+# Testar com o arquivo de testes gerais
 ./analisador_lexico < testes/testes.edu
+
+# Testar com qualquer outro arquivo .edu
+./analisador_lexico < caminho/para/programa.edu
 ```
 
-Modo interativo (finalize com `Ctrl+D`):
+Também é possível testar em modo interativo — o lexer lê do teclado e exibe os tokens em tempo real (finalize com `Ctrl+D`):
 
 ```bash
 ./analisador_lexico
-```
-
-O código de saída é `0` se nenhum erro léxico foi encontrado e `1` caso contrário, permitindo uso em pipelines de CI:
-
-```bash
-./analisador_lexico < testes/testes.edu && echo "OK" || echo "Erros lexicos encontrados"
 ```
 
 ---
@@ -146,10 +152,8 @@ A linguagem `.edu` é uma linguagem imperativa educacional com sintaxe em portug
 - Estruturas de controle (`se/senao/fim_se`, `enquanto/fim_enquanto`, `repetir/ate`)
 - Definição de `procedimento` e `funcao` com parâmetros por referência (`ref`)
 - Tipo de retorno de funções declarado com o operador `->`
-- Instrução de retorno com `retorne`
 - Vetores (arrays) com sintaxe `Tipo[tamanho]` e acesso por `vetor[i]`
 - Literais booleanos (`Verdadeiro` / `Falso`)
-- Declaração de constantes com `Constante`
 - Comentários de linha (`//`) e de bloco (`/* */`)
 
 **Exemplo de código `.edu`:**
@@ -174,10 +178,7 @@ O arquivo `src/lexer.l` é organizado em três seções, conforme o padrão Flex
 ```lex
 %{
   #include <stdio.h>
-  int linha_atual  = 1;   // Rastreia a linha atual no código-fonte
-  int coluna_atual = 1;   // Rastreia a coluna atual na linha
-  int total_tokens = 0;   // Contador de tokens reconhecidos com sucesso
-  int total_erros  = 0;   // Contador de erros léxicos encontrados
+  int linha_atual = 1;    // Contador de linhas — rastreia a posição no código
 %}
 
 ESPACO      [ \t\r]+
@@ -186,7 +187,7 @@ LETRA       [a-zA-Z]
 ID          {LETRA}({LETRA}|{DIGITO}|_)*
 INTEIRO     {DIGITO}+
 REAL        {DIGITO}+"."{DIGITO}+
-TEXTO       \"([^\\\"\n]|\\.)*\"
+TEXTO       \"([^\\\"]|\\.)*\"
 ```
 
 **Macros de expressão regular definidas:**
@@ -199,29 +200,22 @@ TEXTO       \"([^\\\"\n]|\\.)*\"
 | `ID` | `{LETRA}({LETRA}\|{DIGITO}\|_)*` | Identificador: começa com letra, seguido de letras, dígitos ou `_` |
 | `INTEIRO` | `{DIGITO}+` | Um ou mais dígitos |
 | `REAL` | `{DIGITO}+"."{DIGITO}+` | Número com ponto decimal obrigatório |
-| `TEXTO` | `\"([^\\\"\n]\|\\.)* \"` | String entre aspas duplas; não permite quebra de linha literal |
-
-> **Nota sobre `TEXTO`:** O padrão exclui `\n` literal dentro de strings (representado por `[^\\\"\n]`). Isso impede que uma aspa de fechamento esquecida "engula" linhas inteiras do arquivo, gerando mensagens de erro mais claras.
+| `TEXTO` | `\"([^\\\"]\\.)*\"` | String entre aspas duplas com suporte a sequências de escape |
 
 ### Seção 2 — Regras de Reconhecimento
 
-Cada regra associa um padrão (expressão regular) a uma ação em C. O Flex aplica a regra do **maximal munch** (casa sempre o padrão mais longo) e, em caso de empate de comprimento, a regra declarada primeiro. Por isso, operadores compostos (`==`, `!=`, `>=`, `<=`, `->`) são declarados **antes** de seus prefixos simples (`=`, `!`, `>`, `<`, `-`).
+Cada regra associa um padrão (expressão regular) a uma ação em C. O Flex aplica a primeira regra que corresponde ao texto atual, na ordem em que estão declaradas.
 
 ### Seção 3 — Código C Auxiliar
 
 ```c
 #ifndef yywrap
-int yywrap(void) { return 1; }
+int yywrap(void) { return 1; }  // Sinaliza fim da entrada para o Flex
 #endif
 
 int main(void) {
-    yylex();
-    // Exibe sumário ao final
-    printf("\n--- Analise concluida ---\n");
-    printf("Linhas processadas : %d\n", linha_atual);
-    printf("Tokens reconhecidos: %d\n", total_tokens);
-    // ...
-    return (total_erros > 0) ? 1 : 0;
+    yylex();   // Inicia a análise léxica
+    return 0;
 }
 ```
 
@@ -229,28 +223,19 @@ int main(void) {
 
 ## 9. Tokens Reconhecidos
 
-Todos os tokens são exibidos com prefixo de posição no formato `[L<linha>:C<coluna>]`:
-
-```
-[L3:C5] IDENTIFICADOR(pivo)
-[L3:C9] SINAL_IGUALDADE
-```
-
 ### 9.1 Espaços e Quebras de Linha
 
 | Padrão | Ação |
 |---|---|
-| Espaços, tabs (`\t`) e `\r` | Ignorados; `coluna_atual` avança |
-| Quebra de linha (`\n`) | `linha_atual++`; `coluna_atual` volta para 1 |
+| Espaços, tabs (`\t`) e `\r` | Ignorados silenciosamente |
+| Quebra de linha (`\n`) | Incrementa `linha_atual` para rastreamento de posição |
 
 ### 9.2 Comentários
 
-| Tipo | Sintaxe | Token emitido | Observação |
-|---|---|---|---|
-| Linha | `// texto até fim da linha` | Nenhum | `coluna_atual` avança |
-| Bloco | `/* texto em múltiplas linhas */` | Nenhum | Newlines internos **incrementam** `linha_atual` |
-
-> **Importante:** Comentários de bloco não emitem token, mas o lexer lê o conteúdo caractere a caractere para manter `linha_atual` correto. Tokens após um comentário de bloco multilinha reportam a linha exata.
+| Tipo | Sintaxe | Token emitido |
+|---|---|---|
+| Linha | `// texto até fim da linha` | `COMENTARIO_LINHA_IGNORADO` |
+| Bloco | `/* texto em múltiplas linhas */` | `COMENTARIO_BLOCO_IGNORADO` |
 
 ### 9.3 Palavras Reservadas
 
@@ -267,15 +252,13 @@ Todos os tokens são exibidos com prefixo de posição no formato `[L<linha>:C<c
 | `fim` | `FIM` | Fechamento de bloco de código |
 | `procedimento` | `PROCEDIMENTO` | Declaração de procedimento (sem retorno) |
 | `funcao` | `FUNCAO` | Declaração de função (com retorno) |
-| `retorne` | `RETORNE` | Instrução de retorno de valor (**forma canônica**) |
-| `retornar` | `RETORNE` + aviso | **Depreciado** — emite aviso no `stderr`; use `retorne` |
+| `retorne` | `RETORNE` | Instrução de retorno de valor |
 | `ref` | `MODIFICADOR_REF` | Passagem de argumento por referência |
-
-> **Sobre `retorne` vs `retornar`:** Ambas as formas produzem o mesmo token `RETORNE`, mas `retornar` gera um aviso de depreciação em `stderr`. A forma canônica da linguagem `.edu` é `retorne`. Código que usa `retornar` continua funcionando, mas deve ser migrado.
+| `main` | Procedimento principal |
 
 ### 9.4 Tipos Primitivos
 
-> **Convenção:** todos os tipos na linguagem `.edu` começam com letra **maiúscula**, diferenciando-os de identificadores comuns.
+> **Atenção:** Na linguagem `.edu`, os tipos começam com letra **maiúscula**, diferenciando-os de identificadores comuns.
 
 | Lexema | Token |
 |---|---|
@@ -283,10 +266,7 @@ Todos os tokens são exibidos com prefixo de posição no formato `[L<linha>:C<c
 | `Real` | `TIPO_REAL` |
 | `Texto` | `TIPO_TEXTO` |
 | `Booleano` | `TIPO_BOOLEANO` |
-| `Constante` | `CONSTANTE` (**forma canônica**) |
-| `constante` | `CONSTANTE` + aviso | 
-
-> **Sobre `Constante`:** A forma com inicial minúscula (`constante`) é aceita com aviso de depreciação em `stderr` para compatibilidade retroativa. A forma canônica é `Constante`, em linha com a convenção dos demais tipos.
+| `constante` | `CONSTANTE` |
 
 ### 9.5 Literais
 
@@ -298,9 +278,7 @@ Todos os tokens são exibidos com prefixo de posição no formato `[L<linha>:C<c
 | Número inteiro | `10`, `100`, `42` | `LITERAL_INTEIRO(valor)` |
 | String | `"olá mundo"` | `LITERAL_TEXTO(valor)` |
 
-> **Prioridade:** A regra de `REAL` é declarada **antes** de `INTEIRO`, garantindo que `3.14` seja reconhecido como real e não como dois tokens separados por ponto.
-
-> **Números negativos:** O lexer não reconhece literais negativos. `-3` é tokenizado como `OP_SUBTRACAO` + `LITERAL_INTEIRO(3)`. O parser é responsável por interpretar o sinal unário.
+> **Prioridade:** A regra de `REAL` é declarada **antes** de `INTEIRO` no lexer, garantindo que `3.14` seja reconhecido como real, e não como dois tokens inteiros separados por ponto.
 
 ### 9.6 Operadores Aritméticos
 
@@ -310,22 +288,8 @@ Todos os tokens são exibidos com prefixo de posição no formato `[L<linha>:C<c
 | `-` | `OP_SUBTRACAO` |
 | `*` | `OP_MULTIPLICACAO` |
 | `/` | `OP_DIVISAO` |
-| `%` | `OP_MODULO` |
 
-### 9.7 Operadores de Atribuição Composta
-
-| Lexema | Token | Equivalente |
-|---|---|---|
-| `+=` | `OP_ATRIB_SOMA` | `x = x + y` |
-| `-=` | `OP_ATRIB_SUB` | `x = x - y` |
-| `*=` | `OP_ATRIB_MUL` | `x = x * y` |
-| `/=` | `OP_ATRIB_DIV` | `x = x / y` |
-
-> **Nota:** Esses tokens são declarados **antes** de `+`, `-`, `*`, `/` e `=` no lexer, garantindo que `+=` nunca seja interpretado como `OP_SOMA` + `SINAL_IGUALDADE`.
-
-### 9.8 Operadores Relacionais e Lógicos
-
-> **Nota sobre ordem de declaração:** Operadores compostos (`==`, `!=`, `>=`, `<=`) são declarados antes de seus prefixos (`=`, `!`, `>`, `<`) para tornar a intenção explícita, mesmo que o Flex já resolva corretamente via maximal munch.
+### 9.7 Operadores Relacionais e Lógicos
 
 | Lexema | Token |
 |---|---|
@@ -340,7 +304,7 @@ Todos os tokens são exibidos com prefixo de posição no formato `[L<linha>:C<c
 | `\|\|` | `OP_LOGICO_OU` |
 | `!` | `OP_LOGICO_NAO` |
 
-### 9.9 Delimitadores e Pontuação
+### 9.8 Delimitadores e Pontuação
 
 | Lexema | Token | Uso na linguagem |
 |---|---|---|
@@ -355,9 +319,7 @@ Todos os tokens são exibidos com prefixo de posição no formato `[L<linha>:C<c
 | `{` | `ABRE_CHAVES` | Delimitador de bloco alternativo |
 | `}` | `FECHA_CHAVES` | Delimitador de bloco alternativo |
 
-> **Sobre `->` e `-`:** `->` é declarado antes de `-` no lexer. Escrever `- >` (com espaço entre os dois caracteres) produz `OP_SUBTRACAO` + `OP_MAIOR` — não `SETA_RETORNO`. A seta de retorno exige os dois caracteres contíguos.
-
-### 9.10 Identificadores
+### 9.9 Identificadores
 
 Qualquer sequência que comece com uma letra e seja seguida de letras, dígitos ou underscores, **desde que não seja uma palavra reservada ou tipo**, é reconhecida como identificador.
 
@@ -365,109 +327,142 @@ Qualquer sequência que comece com uma letra e seja seguida de letras, dígitos 
 
 **Exemplos válidos:** `x`, `soma`, `pivo`, `inicio_vetor`, `QuickSort`, `numeros`
 
-**Token emitido:** `IDENTIFICADOR(nome)` — ex.: `[L5:C5] IDENTIFICADOR(pivo)`
+**Token emitido:** `IDENTIFICADOR(nome)` — ex.: `IDENTIFICADOR(pivo)`
 
-> As palavras reservadas são declaradas **antes** dos identificadores. Como o Flex casa o padrão mais longo, `inicio_vetor` (14 chars) sempre vence `inicio` (6 chars), sendo reconhecido como `IDENTIFICADOR(inicio_vetor)`.
+> **Importante:** As palavras reservadas são declaradas **antes** dos identificadores no arquivo `lexer.l`. Como o Flex segue a ordem de declaração, `se` será reconhecido como `SE` e nunca como `IDENTIFICADOR(se)`.
 
 ---
 
 ## 10. Tratamento de Erros Léxicos
 
-Qualquer caractere que não se enquadre em nenhuma regra é capturado pela **regra curinga** `.`:
+Qualquer caractere que não se enquadre em nenhuma das regras anteriores é capturado pela **regra curinga** `.` (ponto), que corresponde a qualquer caractere individual não reconhecido:
 
 ```lex
-.   { fprintf(stderr, "[ERRO L%d:C%d] Caractere invalido: '%s'\n",
-              linha_atual, coluna_atual, yytext);
-      coluna_atual++;
-      total_erros++;
-    }
+.   { printf("Charactere Invalido.\n"); }
 ```
 
-**Comportamento:**
-- O analisador **não interrompe** ao encontrar um erro — continua processando o restante do arquivo
-- A mensagem vai para `stderr`, separada da saída de tokens (`stdout`), permitindo redirecionamentos independentes
-- `total_erros` é incrementado e refletido no código de saída (`return 1` se `total_erros > 0`)
+**Comportamento:** O analisador **não interrompe a execução** ao encontrar um erro. Ele emite a mensagem e **continua processando** o restante do arquivo, permitindo que múltiplos erros sejam identificados em uma única passagem.
 
-**Exemplo:**
+**Exemplo prático:** O caractere `@` no arquivo `testes.edu` é propositalmente inválido e produz a saída:
 
 ```
-[ERRO L13:C3] Caractere invalido: '@'
+Charactere Invalido.
 ```
 
 ---
 
-## 11. Exemplos de Saída
+## 11 Especificação do Analisador Sintático
 
-### Entrada (`testes.edu` — trecho)
+O arquivo `src/parser.y` converte a gramática EBNF da linguagem `.edu` em regras BNF legíveis pelo Bison (usando recursão à esquerda). A análise é feita no modelo Bottom-Up (LALR).
+
+As principais estruturas validadas pelo analisador incluem:
+
+### 11.1 Estrutura do Programa
+
+Um programa válido exige uma lista opcional de subprogramas (procedimentos/funções) seguida obrigatoriamente pelo método principal:
+```
+program : subprograms main_program ;
+main_program : PROCEDIMENTO MAIN ABRE_PARENTESES FECHA_PARENTESES INICIO stmts FIM ;
+```
+
+## 11.2 Declarações e Atribuições
+
+Valida declarações de variáveis (simples ou vetores) e operações de atribuição:
+``` 
+decl : IDENTIFICADOR DOIS_PONTOS type array_decl_opt assign_opt ;
+assign : var SINAL_IGUALDADE expr ;
+```
+
+## 11.3 Estruturas de Fluxo
+
+Garante o fechamento correto dos blocos e expressões condicionais internas:
+```
+if_stmt : SE ABRE_PARENTESES expr FECHA_PARENTESES INICIO stmts else_opt FIM_SE ;
+loop_stmt : ENQUANTO ABRE_PARENTESES expr FECHA_PARENTESES INICIO stmts FIM_ENQUANTO ;
+```
+
+## 11.4 Precedência Matemática
+
+As regras de expressão (`expr`, `term`, `factor`) estão estruturadas hierarquicamente para garantir que operações como multiplicação sejam processadas sintaticamente antes da soma, suportando também o agrupamento por parênteses.
+
+---
+
+## 12 Tratamento de Erros Sintáticos
+
+Quando o Bison encontra um token em uma ordem que viola as regras gramaticais (ex: um `+` sem número depois, ou um bloco `se` sem `fim_se`), ele aciona automaticamente a função `yyerror`.
+
+A nossa implementação personalizada desta função imprime o erro detalhado cruzando dados com o Flex:
+```
+void yyerror(const char *s) {
+    fprintf(stderr, "[ERRO SINTATICO] Linha %d, Coluna %d: %s proximo a '%s'\n", 
+            linha_atual, coluna_atual, s, yytext);
+}
+```
+
+---
+
+## 13. Exemplos de Saída
+
+### Entrada (`testes.edu`)
 
 ```
 inicio
   Inteiro numero
-  numero += 5
+  Texto palavra
+  Real nota
+
+  se Verdadeiro inicio
+    enquanto Falso inicio
+      numero
+    fim_enquanto
+  fim_se
+
   @
 fim
 ```
 
-### Saída esperada (`stdout`)
+### Saída esperada
 
 ```
-[L1:C1] INICIO
-[L2:C3] TIPO_INTEIRO
-[L2:C11] IDENTIFICADOR(numero)
-[L3:C3] IDENTIFICADOR(numero)
-[L3:C10] OP_ATRIB_SOMA
-[L3:C13] LITERAL_INTEIRO(5)
-[L5:C1] FIM
-
---- Analise concluida ---
-Linhas processadas : 5
-Tokens reconhecidos: 7
-Erros lexicos      : 0
-```
-
-### Saída de erro (`stderr`)
-
-```
-[ERRO L4:C3] Caractere invalido: '@'
+INICIO
+TIPO_INTEIRO
+IDENTIFICADOR(numero)
+TIPO_TEXTO
+IDENTIFICADOR(palavra)
+TIPO_REAL
+IDENTIFICADOR(nota)
+COMENTARIO_LINHA_IGNORADO
+SE
+LITERAL_BOOLEANO(Verdadeiro)
+INICIO
+ENQUANTO
+LITERAL_BOOLEANO(Falso)
+INICIO
+IDENTIFICADOR(numero)
+FIM_ENQUANTO
+FIM_SE
+Charactere Invalido.
+FIM
 ```
 
 ---
 
-## 12. Arquivos de Teste
+## 14. Arquivos de Teste
 
-### `testes/quicksort.edu` — QuickSort
+- `testes/quicksort.edu`: Implementação completa e válida do algoritmo QuickSort. Exercita recursividade, laços, condicionais e manipulação de vetores.
 
-Implementação completa do algoritmo **QuickSort** na linguagem `.edu`. Exercita:
+- `testes/quicksortERRO.edu`: Variante do código acima contendo erros sintáticos deliberados, usado para testar a captura de exceções do Bison.
 
-- `procedimento` com parâmetro por referência (`ref vetor: Inteiro[]`)
-- `funcao` com tipo de retorno via `->` (`-> Inteiro`)
-- Instrução `retorne` (forma canônica)
-- Acesso a vetores (`vetor[i]`, `vetor[j]`)
-- Laço `enquanto / fim_enquanto` com condição relacional
-- Condicional `se / fim_se` dentro de laço
-- Chamadas recursivas
-- Expressões aritméticas (`i + 1`, `pivo - 1`)
-
-### `testes/testes.edu` — Testes Gerais
-
-Arquivo de verificação abrangente. Contém:
-
-- Todos os tipos primitivos incluindo `Constante`
-- Literais inteiro, real, texto e booleano
-- Operadores aritméticos incluindo `%` (módulo)
-- Operadores de atribuição composta (`+=`, `-=`, `*=`, `/=`)
-- Operadores relacionais e lógicos
-- Estruturas de controle aninhadas
-- Laço `repetir / ate`
-- Comentário de bloco multilinha (para validar contagem de linhas)
-- Caractere inválido `@` para validar continuidade após erro léxico
+- `testes/testes.edu`: Avaliação de tipos, operações e literais soltos.
 
 ---
 
-## 13. Referências
+## 15. Referências
 
+- [Manual do Bison — GNU Project](https://www.gnu.org/software/bison/manual/)
 - [Manual do Flex — GNU Project](https://www.gnu.org/software/flex/manual/)
 - [Compiladores: Princípios, Técnicas e Ferramentas — Aho, Lam, Sethi, Ullman](https://en.wikipedia.org/wiki/Compilers:_Principles,_Techniques,_and_Tools) *(Livro do Dragão)*
 - Disciplina DIM0548 — Engenharia de Linguagens, UFRN
 
 ---
+
