@@ -12,10 +12,9 @@ funcao Particionar (ref vetor: Inteiro[], inicio_vetor: Inteiro, fim_vetor: Inte
     i: Inteiro = inicio_vetor - 1
     j: Inteiro = inicio_vetor
 
-    // ERRO 2: Falta o ')' fechando a condição do enquanto
-    enquanto (j < fim_vetor inicio
+    enquanto (j < fim_vetor) inicio
         
-        // ERRO 3: Falta a palavra 'inicio' para abrir o bloco do 'se'
+        // ERRO 2: Falta a palavra 'inicio' para abrir o bloco do 'se'
         se (vetor[j] <= pivo) 
             i = i + 1
             Trocar(vetor, i, j)
@@ -33,7 +32,7 @@ procedimento QuickSort (ref vetor: Inteiro[], inicio_vetor: Inteiro, fim_vetor: 
     se (inicio_vetor < fim_vetor) inicio
         pivo: Inteiro = Particionar(vetor, inicio_vetor, fim_vetor)
 
-        // ERRO 4: Falta a vírgula separando o primeiro e o segundo argumento
+        // ERRO 3: Falta a vírgula separando o primeiro e o segundo argumento
         QuickSort(vetor inicio_vetor, pivo - 1)
         QuickSort(vetor, pivo + 1, fim_vetor)
     fim_se

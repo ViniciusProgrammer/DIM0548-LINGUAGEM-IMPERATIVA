@@ -18,23 +18,20 @@
 8. [Especificação do Analisador Léxico](#8-especificação-do-analisador-léxico)
 9. [Tokens Reconhecidos](#9-tokens-reconhecidos)
 10. [Tratamento de Erros Léxicos](#10-tratamento-de-erros-léxicos)
-11. [Exemplos de Saída](#11-exemplos-de-saída)
-12. [Arquivos de Teste](#12-arquivos-de-teste)
-13. [Referências](#13-referências)
+11. [Especificação do Analisador Sintático](#11-especificação-do-analisador-sintático)
+12. [Tratamento de Erros Sintáticos](#12-tratamento-de-erros-sintáticos)
+13. [Exemplos de Saída](#13-exemplos-de-saída)
+14. [Arquivos de Teste](#14-arquivos-de-teste)
+15. [Referências](#15-referências)
 
 ---
 
 ## 1. Visão Geral
 
-Este projeto implementa um **analisador léxico** (*lexer* / *scanner*) para uma linguagem imperativa educacional chamada `.edu`. O analisador foi desenvolvido como trabalho prático da disciplina **DIM0548 — Engenharia de Linguagens** e representa a **primeira fase de um compilador**: a leitura do código-fonte para identificar e classificar unidades léxicas chamadas de **tokens**.
+Este projeto implementa as duas primeiras fases de um compilador (o **Analisador Léxico** e o **Analisador Sintático**) para uma linguagem imperativa educacional chamada `.edu`. O projeto foi desenvolvido como trabalho prático da disciplina **DIM0548 — Engenharia de Linguagens**.
 
-O lexer é capaz de:
-
-- Reconhecer **palavras reservadas**, **tipos primitivos**, **literais** e **identificadores** da linguagem `.edu`
-- Identificar todos os **operadores** (aritméticos, lógicos e relacionais) e **delimitadores**
-- Processar **comentários** de linha e de bloco sem emitir tokens
-- **Rastrear o número de linhas** durante a análise via variável `linha_atual`
-- Reportar **erros léxicos** com mensagens claras para qualquer caractere inválido encontrado
+- **Fase 1 (Léxica):** Lê o código-fonte e agrupa os caracteres em unidades lógicas chamadas **tokens** (palavras reservadas, identificadores, operadores).
+- **Fase 2 (Sintática):** Recebe esses tokens e verifica se eles formam frases válidas de acordo com a **gramática** da linguagem, garantindo a ordem estrutural (ex: um `se` deve ter um `fim_se`).
 
 ---
 
@@ -44,14 +41,18 @@ O lexer é capaz de:
 DIM0548-LINGUAGEM-IMPERATIVA/
 │
 ├── src/
-│   ├── lexer.l          # Especificação do analisador (Flex) — arquivo principal
-│   └── lex.yy.c         # Código C gerado automaticamente pelo Flex (não editar)
+│   ├── lexer.l          # Especificação do analisador léxico (Flex)
+│   ├── parser.y         # Especificação do analisador sintático (Bison)
+│   ├── lex.yy.c         # Código gerado pelo Flex (não editar)
+│   ├── y.tab.c          # Código C gerado pelo Bison (não editar)
+│   └── y.tab.h          # Cabeçalho gerado pelo Bison com a lista de tokens
 │
 ├── docs/                # Documentação adicional
 │
 ├── testes/
-│   ├── quisort.edu      # Programa QuickSort na linguagem .edu
-│   └── testes.edu       # Arquivo de teste de estruturas e erros léxicos
+│   ├── quicksort.edu       # Programa QuickSort válido
+│   ├── quicksortERRO.edu   # Programa com erros sintáticos para validação
+│   └── testes.edu          # Arquivo de teste de estruturas gerais
 │
 ├── compilar.sh          # Script de build automatizado
 ├── .gitignore
@@ -65,13 +66,15 @@ DIM0548-LINGUAGEM-IMPERATIVA/
 | Ferramenta | Função |
 |---|---|
 | **Flex** | Gerador de analisadores léxicos a partir de regras definidas no arquivo `.l` |
+| **Bison** |	Gerador do analisador sintático (LALR) a partir de regras gramaticais `.y` |
 | **GCC** | Compilador C que transforma o código gerado pelo Flex em executável binário |
 | **Bash** | Automatiza o processo de build no script `compilar.sh` |
 
 **Distribuição de linguagens no repositório:**
 
-- Lex (`.l`): **96,2%**
-- Shell (`.sh`): **3,8%**
+- Yacc (`.y`): **51,4%**
+- Lex (`.l`): **38,0%**
+- Shell (`.sh`): **10,6%**
 
 ---
 
@@ -81,42 +84,37 @@ O projeto foi desenvolvido para **Linux**. É necessário ter o **Flex** e o **G
 
 **Ubuntu / Debian:**
 ```bash
-sudo apt update && sudo apt install flex gcc -y
+sudo apt update && sudo apt install flex bison gcc -y
 ```
 
 **Arch Linux:**
 ```bash
-sudo pacman -S flex gcc
+sudo pacman -S flex bison gcc
 ```
 
 **Fedora / RHEL:**
 ```bash
-sudo dnf install flex gcc
+sudo dnf install flex bison gcc
 ```
 
 ---
 
 ## 5. Como Compilar
 
-O script `compilar.sh` automatiza todo o processo de build em dois passos:
+O script `compilar.sh` automatiza todo o processo de build integrando Flex e Bison:
 
 ```bash
-# Passo 1: Flex gera o código C a partir das regras do lexer
-flex -o src/lex.yy.c src/lexer.l
-
-# Passo 2: GCC compila o código C gerado em executável
-gcc src/lex.yy.c -o analisador_lexico
-```
-
-**Para executar:**
-
-```bash
-# Na raiz do repositório
+# Na raiz do repositório, dê permissão de execução (apenas a primeira vez):
 chmod +x compilar.sh
+
+# Execute o script:
 ./compilar.sh
 ```
 
-Ao final, será exibida a mensagem `Compilacao concluida com sucesso!` e o executável `analisador_lexico` estará disponível na raiz do projeto.
+O que o script faz:
+1. Roda o `bison -d` para gerar o parser e a lista de tokens (`y.tab.h`).
+2. Roda o `flex` para gerar o scanner.
+3. Usa o `gcc` para juntar ambos no executável `analisador_sintatico`.
 
 ---
 
@@ -125,8 +123,11 @@ Ao final, será exibida a mensagem `Compilacao concluida com sucesso!` e o execu
 O analisador lê o código-fonte pela **entrada padrão** (`stdin`). Use a redireção `<` para passar um arquivo:
 
 ```bash
-# Testar com o QuickSort
-./analisador_lexico < testes/quisort.edu
+# Testar código válido (Deve exibir SUCESSO)
+./analisador_sintatico < testes/quicksort.edu
+
+# Testar código inválido (Deve acusar ERRO SINTÁTICO)
+./analisador_sintatico < testes/quicksortERRO.edu
 
 # Testar com o arquivo de testes gerais
 ./analisador_lexico < testes/testes.edu
@@ -199,7 +200,7 @@ TEXTO       \"([^\\\"]|\\.)*\"
 | `ID` | `{LETRA}({LETRA}\|{DIGITO}\|_)*` | Identificador: começa com letra, seguido de letras, dígitos ou `_` |
 | `INTEIRO` | `{DIGITO}+` | Um ou mais dígitos |
 | `REAL` | `{DIGITO}+"."{DIGITO}+` | Número com ponto decimal obrigatório |
-| `TEXTO` | `\"([^\\\"]|\\.)*\"` | String entre aspas duplas com suporte a sequências de escape |
+| `TEXTO` | `\"([^\\\"]\\.)*\"` | String entre aspas duplas com suporte a sequências de escape |
 
 ### Seção 2 — Regras de Reconhecimento
 
@@ -253,6 +254,7 @@ int main(void) {
 | `funcao` | `FUNCAO` | Declaração de função (com retorno) |
 | `retorne` | `RETORNE` | Instrução de retorno de valor |
 | `ref` | `MODIFICADOR_REF` | Passagem de argumento por referência |
+| `main` | Procedimento principal |
 
 ### 9.4 Tipos Primitivos
 
@@ -349,7 +351,57 @@ Charactere Invalido.
 
 ---
 
-## 11. Exemplos de Saída
+## 11 Especificação do Analisador Sintático
+
+O arquivo `src/parser.y` converte a gramática EBNF da linguagem `.edu` em regras BNF legíveis pelo Bison (usando recursão à esquerda). A análise é feita no modelo Bottom-Up (LALR).
+
+As principais estruturas validadas pelo analisador incluem:
+
+### 11.1 Estrutura do Programa
+
+Um programa válido exige uma lista opcional de subprogramas (procedimentos/funções) seguida obrigatoriamente pelo método principal:
+```
+program : subprograms main_program ;
+main_program : PROCEDIMENTO MAIN ABRE_PARENTESES FECHA_PARENTESES INICIO stmts FIM ;
+```
+
+## 11.2 Declarações e Atribuições
+
+Valida declarações de variáveis (simples ou vetores) e operações de atribuição:
+``` 
+decl : IDENTIFICADOR DOIS_PONTOS type array_decl_opt assign_opt ;
+assign : var SINAL_IGUALDADE expr ;
+```
+
+## 11.3 Estruturas de Fluxo
+
+Garante o fechamento correto dos blocos e expressões condicionais internas:
+```
+if_stmt : SE ABRE_PARENTESES expr FECHA_PARENTESES INICIO stmts else_opt FIM_SE ;
+loop_stmt : ENQUANTO ABRE_PARENTESES expr FECHA_PARENTESES INICIO stmts FIM_ENQUANTO ;
+```
+
+## 11.4 Precedência Matemática
+
+As regras de expressão (`expr`, `term`, `factor`) estão estruturadas hierarquicamente para garantir que operações como multiplicação sejam processadas sintaticamente antes da soma, suportando também o agrupamento por parênteses.
+
+---
+
+## 12 Tratamento de Erros Sintáticos
+
+Quando o Bison encontra um token em uma ordem que viola as regras gramaticais (ex: um `+` sem número depois, ou um bloco `se` sem `fim_se`), ele aciona automaticamente a função `yyerror`.
+
+A nossa implementação personalizada desta função imprime o erro detalhado cruzando dados com o Flex:
+```
+void yyerror(const char *s) {
+    fprintf(stderr, "[ERRO SINTATICO] Linha %d, Coluna %d: %s proximo a '%s'\n", 
+            linha_atual, coluna_atual, s, yytext);
+}
+```
+
+---
+
+## 13. Exemplos de Saída
 
 ### Entrada (`testes.edu`)
 
@@ -395,34 +447,19 @@ FIM
 
 ---
 
-## 12. Arquivos de Teste
+## 14. Arquivos de Teste
 
-### `testes/quisort.edu` — QuickSort
+- `testes/quicksort.edu`: Implementação completa e válida do algoritmo QuickSort. Exercita recursividade, laços, condicionais e manipulação de vetores.
 
-Implementação completa do algoritmo **QuickSort** na linguagem `.edu`. Exercita as principais construções da linguagem:
+- `testes/quicksortERRO.edu`: Variante do código acima contendo erros sintáticos deliberados, usado para testar a captura de exceções do Bison.
 
-- `procedimento` com parâmetro por referência (`ref vetor: Inteiro[]`)
-- `funcao` com tipo de retorno declarado via `->` (`-> Inteiro`)
-- Acesso a elementos de vetor (`vetor[i]`, `vetor[j]`)
-- Laço `enquanto / fim_enquanto` com condição relacional
-- Condicional `se / fim_se` dentro de laço
-- Chamadas recursivas (`QuickSort(vetor, inicio_vetor, pivo - 1)`)
-- Comentários de linha (`//`) em múltiplos pontos
-- Expressões aritméticas (`i + 1`, `pivo - 1`)
-
-### `testes/testes.edu` — Testes Gerais
-
-Arquivo de verificação geral do analisador. Contém:
-
-- Declarações dos tipos `Inteiro`, `Texto` e `Real`
-- Literais booleanos `Verdadeiro` e `Falso`
-- Estruturas de controle aninhadas (`se` dentro de `enquanto`)
-- Um caractere inválido (`@`) propositalmente inserido para validar o tratamento de erro léxico sem interrupção da análise
+- `testes/testes.edu`: Avaliação de tipos, operações e literais soltos.
 
 ---
 
-## 13. Referências
+## 15. Referências
 
+- [Manual do Bison — GNU Project](https://www.gnu.org/software/bison/manual/)
 - [Manual do Flex — GNU Project](https://www.gnu.org/software/flex/manual/)
 - [Compiladores: Princípios, Técnicas e Ferramentas — Aho, Lam, Sethi, Ullman](https://en.wikipedia.org/wiki/Compilers:_Principles,_Techniques,_and_Tools) *(Livro do Dragão)*
 - Disciplina DIM0548 — Engenharia de Linguagens, UFRN
