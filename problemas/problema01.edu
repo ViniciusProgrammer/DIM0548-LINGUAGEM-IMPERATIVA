@@ -1,0 +1,9 @@
+procedimento main() inicio
+    x: Real = 5.5
+    y: Real = 2.0
+    c: Inteiro = 3
+
+    resultado: Real = x * x - y + c
+
+    Escrever(resultado)
+fim
