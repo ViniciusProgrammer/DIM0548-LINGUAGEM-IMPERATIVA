@@ -5,7 +5,7 @@ procedimento main() início
     faixa3: Inteiro = 0
     faixa4: Inteiro = 0
 
-    Escrever("Digite um número (negativo para encerrar):")
+    Escrever("Digite um número qualquer(digite um número negativo para encerrar):")
     numero = LerInteiro()
 
     enquanto (numero >= 0) início
@@ -21,7 +21,7 @@ procedimento main() início
         se (numero >= 76 e numero <= 100) início
             faixa4 = faixa4 + 1
         fim_se
-        Escrever("Digite um número (negativo para encerrar):")
+        Escrever("Digite outro número (ao digitar um número negativo o programa será encerrado):")
         numero = LerInteiro()
     fim_enquanto
 
