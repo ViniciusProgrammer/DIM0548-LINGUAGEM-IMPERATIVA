@@ -1,0 +1,37 @@
+procedimento main() início
+    numero: Inteiro
+    faixa1: Inteiro = 0
+    faixa2: Inteiro = 0
+    faixa3: Inteiro = 0
+    faixa4: Inteiro = 0
+
+    Escrever("Digite um número (negativo para encerrar):")
+    numero = LerInteiro()
+
+    enquanto (numero >= 0) início
+        se (numero >= 0 e numero <= 25) início
+            faixa1 = faixa1 + 1
+        fim_se
+        se (numero >= 26 e numero <= 50) início
+            faixa2 = faixa2 + 1
+        fim_se
+        se (numero >= 51 e numero <= 75) início
+            faixa3 = faixa3 + 1
+        fim_se
+        se (numero >= 76 e numero <= 100) início
+            faixa4 = faixa4 + 1
+        fim_se
+        Escrever("Digite um número (negativo para encerrar):")
+        numero = LerInteiro()
+    fim_enquanto
+
+    Escrever("Resultados:")
+    Escrever("Intervalo [0, 25]:  ")
+    Escrever(faixa1)
+    Escrever("Intervalo [26, 50]: ")
+    Escrever(faixa2)
+    Escrever("Intervalo [51, 75]: ")
+    Escrever(faixa3)
+    Escrever("Intervalo [76, 100]:")
+    Escrever(faixa4)
+fim
