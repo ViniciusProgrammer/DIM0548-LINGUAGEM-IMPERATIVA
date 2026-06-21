@@ -77,8 +77,8 @@ TEXTO       \"([^\\\"\n]|\\.)*\"
 "Booleano"      { RETORNA_STR(TIPO_BOOLEANO); }
 
  /* ── Literais (carregam valor) ── */
-"Verdadeiro"    { RETORNA_STR(LITERAL_BOOLEANO); }
-"Falso"         { RETORNA_STR(LITERAL_BOOLEANO); }
+"Verdadeiro"    { yylval.sValue = strdup("1"); coluna_atual += yyleng; return LITERAL_BOOLEANO; }
+"Falso"         { yylval.sValue = strdup("0"); coluna_atual += yyleng; return LITERAL_BOOLEANO; }
 {REAL}          { RETORNA_STR(LITERAL_REAL); }
 {INTEIRO}       { RETORNA_STR(LITERAL_INTEIRO); }
 {TEXTO}         { RETORNA_STR(LITERAL_TEXTO); }

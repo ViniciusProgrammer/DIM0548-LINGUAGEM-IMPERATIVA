@@ -1,0 +1,20 @@
+procedimento main()
+inicio
+  numero: Inteiro = 42
+  nota: Real = 9.5
+  ativo: Booleano = Verdadeiro
+
+  se (numero == 42) inicio
+    Escrever("numero e 42");
+  fim_se
+
+  se (nota >= 7.0) inicio
+    Escrever("Aprovado");
+  fim_se
+
+  enquanto (numero > 0) inicio
+    numero -= 1;
+  fim_enquanto
+
+  Escrever(numero);
+fim
