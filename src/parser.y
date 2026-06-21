@@ -37,6 +37,8 @@ static char * c_includes =
 %token SE SENAO FIM_SE ENQUANTO FIM_ENQUANTO REPETIR ATE INICIO FIM
 %token PROCEDIMENTO FUNCAO RETORNE MODIFICADOR_REF MAIN
 %token CONSTANTE
+%token TIPO_INTEIRO TIPO_REAL TIPO_TEXTO TIPO_BOOLEANO CONSTANTE
+%token LITERAL_BOOLEANO LITERAL_REAL LITERAL_INTEIRO LITERAL_TEXTO
 %token ESCREVER LER
 %token OP_SOMA OP_SUBTRACAO OP_MULTIPLICACAO OP_DIVISAO OP_MODULO
 %token SINAL_IGUALDADE OP_MAIOR OP_MENOR OP_LOGICO_E OP_LOGICO_OU
@@ -207,6 +209,18 @@ stmt
     | loop_stmt     { $$ = $1; }
     | return_stmt   { $$ = $1; }
     | io_stmt       { $$ = $1; }
+    : decl
+    | assign
+    | call_stmt
+    | if_stmt
+    | loop_stmt
+    | return_stmt
+    | io_stmt
+    ;
+
+io_stmt
+    : ESCREVER ABRE_PARENTESES expr FECHA_PARENTESES
+    | LER ABRE_PARENTESES var FECHA_PARENTESES
     ;
 
 decl
