@@ -1,13 +1,23 @@
 %{
   #include <stdio.h>
-  #include "y.tab.h" // Arquivo gerado pelo Bison com a lista de tokens
+  #include <stdlib.h>
+  #include <string.h>
+  #include "y.tab.h"
 
   int linha_atual  = 1;
   int coluna_atual = 1;
 
-  /* Atualiza a coluna e retorna o token para o Bison */
+  /* Retorna token simples (sem valor semântico) e atualiza coluna */
   #define RETORNA(token) \
     do { \
+      coluna_atual += yyleng; \
+      return token; \
+    } while(0)
+
+  /* Retorna token com valor de string (para IDENTIFICADOR, literais e tipos) */
+  #define RETORNA_STR(token) \
+    do { \
+      yylval.sValue = strdup(yytext); \
       coluna_atual += yyleng; \
       return token; \
     } while(0)
@@ -15,38 +25,36 @@
 
 %option nounput noinput
 
- /* Definições */
+ /* ── Definições ── */
 ESPACO      [ \t\r]+
 DIGITO      [0-9]
-LETRA       [a-zA-Z]
-ID          {LETRA}({LETRA}|{DIGITO}|_)*
+LETRA       [a-zA-Z_]
+ID          {LETRA}({LETRA}|{DIGITO})*
 INTEIRO     {DIGITO}+
 REAL        {DIGITO}+"."{DIGITO}+
 TEXTO       \"([^\\\"\n]|\\.)*\"
 
 %%
 
- /* ---- Espaços ---- */
-{ESPACO}            { coluna_atual += yyleng; }
-"\n"                { linha_atual++; coluna_atual = 1; }
+ /* ── Espaços ── */
+{ESPACO}    { coluna_atual += yyleng; }
+"\n"        { linha_atual++; coluna_atual = 1; }
 
- /* ---- Comentários ---- */
-\/\/.* { 
-    coluna_atual += yyleng; 
-}
-\/\*([^*]|(\*+[^*\/]))*\*+\/ { 
-    for(int i = 0; yytext[i] != '\0'; i++) {
-        if(yytext[i] == '\n') {
-            linha_atual++;
-            coluna_atual = 1;
-        } else {
-            coluna_atual++;
-        }
+ /* ── Comentários de linha ── */
+\/\/.*      { coluna_atual += yyleng; }
+
+ /* ── Comentários de bloco ── */
+\/\*([^*]|(\*+[^*/]))*\*+\/ {
+    for (int i = 0; yytext[i] != '\0'; i++) {
+        if (yytext[i] == '\n') { linha_atual++; coluna_atual = 1; }
+        else coluna_atual++;
     }
 }
 
- /* ---- Palavras Reservadas ---- */
+ /* ── Palavras Reservadas ── */
 "main"          { RETORNA(MAIN); }
+"Escrever"      { RETORNA(ESCREVER); }
+"Ler"           { RETORNA(LER); }
 "se"            { RETORNA(SE); }
 "senao"         { RETORNA(SENAO); }
 "fim_se"        { RETORNA(FIM_SE); }
@@ -60,22 +68,35 @@ TEXTO       \"([^\\\"\n]|\\.)*\"
 "funcao"        { RETORNA(FUNCAO); }
 "retorne"       { RETORNA(RETORNE); }
 "ref"           { RETORNA(MODIFICADOR_REF); }
-
- /* ---- Tipos Primitivos ---- */
-"Inteiro"       { RETORNA(TIPO_INTEIRO); }
-"Real"          { RETORNA(TIPO_REAL); }
-"Texto"         { RETORNA(TIPO_TEXTO); }
-"Booleano"      { RETORNA(TIPO_BOOLEANO); }
 "Constante"     { RETORNA(CONSTANTE); }
 
- /* ---- Literais ---- */
-"Verdadeiro"    { RETORNA(LITERAL_BOOLEANO); }
-"Falso"         { RETORNA(LITERAL_BOOLEANO); }
-{REAL}          { RETORNA(LITERAL_REAL); }
-{INTEIRO}       { RETORNA(LITERAL_INTEIRO); }
-{TEXTO}         { RETORNA(LITERAL_TEXTO); }
+ /* ── Tipos Primitivos (carregam valor para o parser usar) ── */
+"Inteiro"       { RETORNA_STR(TIPO_INTEIRO); }
+"Real"          { RETORNA_STR(TIPO_REAL); }
+"Texto"         { RETORNA_STR(TIPO_TEXTO); }
+"Booleano"      { RETORNA_STR(TIPO_BOOLEANO); }
 
- /* ---- Operadores e Pontuação ---- */
+ /* ── Literais (carregam valor) ── */
+"Verdadeiro"    { RETORNA_STR(LITERAL_BOOLEANO); }
+"Falso"         { RETORNA_STR(LITERAL_BOOLEANO); }
+{REAL}          { RETORNA_STR(LITERAL_REAL); }
+{INTEIRO}       { RETORNA_STR(LITERAL_INTEIRO); }
+{TEXTO}         { RETORNA_STR(LITERAL_TEXTO); }
+
+ /* ── Operadores compostos ANTES dos simples (ordem importa no flex) ── */
+"=="            { RETORNA(OP_IGUAL); }
+"!="            { RETORNA(OP_DIFERENTE); }
+">="            { RETORNA(OP_MAIOR_IGUAL); }
+"<="            { RETORNA(OP_MENOR_IGUAL); }
+"&&"            { RETORNA(OP_LOGICO_E); }
+"||"            { RETORNA(OP_LOGICO_OU); }
+"->"            { RETORNA(SETA_RETORNO); }
+"+="            { RETORNA(OP_ATRIB_SOMA); }
+"-="            { RETORNA(OP_ATRIB_SUB); }
+"*="            { RETORNA(OP_ATRIB_MUL); }
+"/="            { RETORNA(OP_ATRIB_DIV); }
+
+ /* ── Operadores simples ── */
 "+"             { RETORNA(OP_SOMA); }
 "-"             { RETORNA(OP_SUBTRACAO); }
 "*"             { RETORNA(OP_MULTIPLICACAO); }
@@ -84,20 +105,9 @@ TEXTO       \"([^\\\"\n]|\\.)*\"
 "="             { RETORNA(SINAL_IGUALDADE); }
 ">"             { RETORNA(OP_MAIOR); }
 "<"             { RETORNA(OP_MENOR); }
-"&&"            { RETORNA(OP_LOGICO_E); }
-"||"            { RETORNA(OP_LOGICO_OU); }
 "!"             { RETORNA(OP_LOGICO_NAO); }
-"=="            { RETORNA(OP_IGUAL); }
-"!="            { RETORNA(OP_DIFERENTE); }
-">="            { RETORNA(OP_MAIOR_IGUAL); }
-"<="            { RETORNA(OP_MENOR_IGUAL); }
-"->"            { RETORNA(SETA_RETORNO); }
-"+="            { RETORNA(OP_ATRIB_SOMA); }
-"-="            { RETORNA(OP_ATRIB_SUB); }
-"*="            { RETORNA(OP_ATRIB_MUL); }
-"/="            { RETORNA(OP_ATRIB_DIV); }
 
- /* ---- Delimitadores ---- */
+ /* ── Delimitadores ── */
 ";"             { RETORNA(PONTO_E_VIRGULA); }
 ","             { RETORNA(VIRGULA); }
 ":"             { RETORNA(DOIS_PONTOS); }
@@ -108,10 +118,10 @@ TEXTO       \"([^\\\"\n]|\\.)*\"
 "{"             { RETORNA(ABRE_CHAVES); }
 "}"             { RETORNA(FECHA_CHAVES); }
 
- /* ---- Identificadores ---- */
-{ID}            { RETORNA(IDENTIFICADOR); }
+ /* ── Identificadores (carregam valor) — APÓS todas as palavras reservadas ── */
+{ID}            { RETORNA_STR(IDENTIFICADOR); }
 
- /* ---- Erro léxico ---- */
+ /* ── Erro léxico ── */
 .               {
     fprintf(stderr, "[ERRO L%d:C%d] Caractere invalido: '%s'\n",
             linha_atual, coluna_atual, yytext);
@@ -119,3 +129,5 @@ TEXTO       \"([^\\\"\n]|\\.)*\"
 }
 
 %%
+
+int yywrap(void) { return 1; }
