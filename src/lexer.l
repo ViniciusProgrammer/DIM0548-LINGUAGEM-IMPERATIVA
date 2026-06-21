@@ -47,6 +47,8 @@ TEXTO       \"([^\\\"\n]|\\.)*\"
 
  /* ---- Palavras Reservadas ---- */
 "main"          { RETORNA(MAIN); }
+"Escrever"      { RETORNA(ESCREVER); }
+"Ler"           { RETORNA(LER); }
 "se"            { RETORNA(SE); }
 "senao"         { RETORNA(SENAO); }
 "fim_se"        { RETORNA(FIM_SE); }
