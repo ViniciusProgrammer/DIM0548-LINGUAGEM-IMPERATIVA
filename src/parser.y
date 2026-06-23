@@ -209,18 +209,6 @@ stmt
     | loop_stmt     { $$ = $1; }
     | return_stmt   { $$ = $1; }
     | io_stmt       { $$ = $1; }
-    : decl
-    | assign
-    | call_stmt
-    | if_stmt
-    | loop_stmt
-    | return_stmt
-    | io_stmt
-    ;
-
-io_stmt
-    : ESCREVER ABRE_PARENTESES expr FECHA_PARENTESES
-    | LER ABRE_PARENTESES var FECHA_PARENTESES
     ;
 
 decl

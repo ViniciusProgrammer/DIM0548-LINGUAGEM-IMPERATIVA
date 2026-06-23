@@ -5,20 +5,10 @@
 
 int main(void)
 {
-int numero = 42;
-float nota = 9.5;
-int ativo = 1;
-if(!((numero==42))) goto L1;
-printf("%s\n", "numero e 42");
-L1:;
-if(!((nota>=7.0))) goto L2;
-printf("%s\n", "Aprovado");
-L2:;
-L3:;
-if(!((numero>0))) goto L4;
-numero -= 1;
-goto L3;
-L4:;
-printf("%d\n", (int)(numero));
+float x = 5.5;
+float y = 2.0;
+int c = 3;
+float resultado = x*x-y+c;
+printf("%d\n", (int)(resultado));
 return 0;
 }
