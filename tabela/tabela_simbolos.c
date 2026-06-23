@@ -134,8 +134,8 @@ VarType type_from_string(const char * s) {
     if (strcmp(s, "bool")  == 0) return TYPE_BOOL;
     if (strcmp(s, "int")   == 0) return TYPE_INT;
     if (strcmp(s, "float") == 0) return TYPE_FLOAT;
-    if (strcmp(s, "texto") == 0) return TYPE_STRING;
-    if (strcmp(s, "vazio") == 0) return TYPE_VOID;
+    if (strcmp(s, "texto") == 0 || strcmp(s, "char*") == 0) return TYPE_STRING;
+    if (strcmp(s, "vazio") == 0 || strcmp(s, "void") == 0) return TYPE_VOID;
     
     return TYPE_UNKNOWN;
 }

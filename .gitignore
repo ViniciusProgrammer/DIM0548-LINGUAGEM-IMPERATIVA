@@ -9,3 +9,4 @@ analisador_sintatico
 .DS_Store
 .vscode/
 *.o
+compiler

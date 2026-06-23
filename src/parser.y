@@ -13,6 +13,7 @@ extern char* yytext;
 extern FILE * yyout;
 
 void yyerror(const char *s);
+char * get_base_name(const char * name);
 
 /* Saída gerada */
 
@@ -37,8 +38,6 @@ static char * c_includes =
 %token SE SENAO FIM_SE ENQUANTO FIM_ENQUANTO REPETIR ATE INICIO FIM
 %token PROCEDIMENTO FUNCAO RETORNE MODIFICADOR_REF MAIN
 %token CONSTANTE
-%token TIPO_INTEIRO TIPO_REAL TIPO_TEXTO TIPO_BOOLEANO CONSTANTE
-%token LITERAL_BOOLEANO LITERAL_REAL LITERAL_INTEIRO LITERAL_TEXTO
 %token ESCREVER LER
 %token OP_SOMA OP_SUBTRACAO OP_MULTIPLICACAO OP_DIVISAO OP_MODULO
 %token SINAL_IGUALDADE OP_MAIOR OP_MENOR OP_LOGICO_E OP_LOGICO_OU
@@ -251,12 +250,14 @@ assign
     : var assign_op expr
       {
           /* Verificação de tipo */
-          Symbol * sym = sym_lookup($1->opt1);
+          char * base = get_base_name($1->code);
+          Symbol * sym = sym_lookup(base);
           if (!sym)
-              fprintf(stderr, "[ERRO SEMANTICO] Linha %d: '%s' nao declarado\n", linha_atual, $1->opt1);
+              fprintf(stderr, "[ERRO SEMANTICO] Linha %d: '%s' nao declarado\n", linha_atual, base);
           else if (!types_compatible(sym->type, type_from_string($3->opt1)) &&
                    type_from_string($3->opt1) != TYPE_UNKNOWN)
-              fprintf(stderr, "[ERRO SEMANTICO] Linha %d: tipos incompativeis em '%s'\n", linha_atual, $1->opt1);
+              fprintf(stderr, "[ERRO SEMANTICO] Linha %d: tipos incompativeis em '%s'\n", linha_atual, base);
+          free(base);
 
           char * s = cat($1->code, $2, $3->code, ";\n", "");
           freeRecord($1); free($2); freeRecord($3);
@@ -414,10 +415,21 @@ io_stmt
       {
           char * s;
           VarType et = type_from_string($3->opt1);
+          if (et == TYPE_UNKNOWN) {
+              char * base = get_base_name($3->code);
+              Symbol * sym = sym_lookup(base);
+              free(base);
+              if (!sym) {
+                  base = get_base_name($3->opt1);
+                  sym = sym_lookup(base);
+                  free(base);
+              }
+              if (sym) et = sym->type;
+          }
           if ($3->code[0] == '"')
               s = cat("printf(\"%s\\n\", ", $3->code, ");\n", "", "");
           else if (et == TYPE_FLOAT)
-              s = cat("printf(\"%f\\n\", (double)(", $3->code, "));\n", "", "");
+              s = cat("printf(\"%f\\n\", (float)(", $3->code, "));\n", "", "");
           else if (et == TYPE_STRING)
               s = cat("printf(\"%s\\n\", ", $3->code, ");\n", "", "");
           else
@@ -429,10 +441,23 @@ io_stmt
       {
           char * s;
           VarType et = type_from_string($3->opt1);
+          if (et == TYPE_UNKNOWN) {
+              char * base = get_base_name($3->code);
+              Symbol * sym = sym_lookup(base);
+              free(base);
+              if (!sym) {
+                  base = get_base_name($3->opt1);
+                  sym = sym_lookup(base);
+                  free(base);
+              }
+              if (sym) et = sym->type;
+          }
           if ($3->code[0] == '"')
               s = cat("printf(\"%s\\n\", ", $3->code, ");\n", "", "");
           else if (et == TYPE_FLOAT)
-              s = cat("printf(\"%f\\n\", (double)(", $3->code, "));\n", "", "");
+              s = cat("printf(\"%f\\n\", (float)(", $3->code, "));\n", "", "");
+          else if (et == TYPE_STRING)
+              s = cat("printf(\"%s\\n\", ", $3->code, ");\n", "", "");
           else
               s = cat("printf(\"%d\\n\", (int)(", $3->code, "));\n", "", "");
           freeRecord($3);
@@ -440,7 +465,9 @@ io_stmt
       }
     | LER ABRE_PARENTESES var FECHA_PARENTESES PONTO_E_VIRGULA
       {
-          Symbol * sym = sym_lookup($3->opt1);
+          char * base = get_base_name($3->code);
+          Symbol * sym = sym_lookup(base);
+          free(base);
           char fmt[8] = "%d";
           if (sym) {
               if (sym->type == TYPE_FLOAT)  strcpy(fmt, "%f");
@@ -453,7 +480,9 @@ io_stmt
       }
     | LER ABRE_PARENTESES var FECHA_PARENTESES
       {
-          Symbol * sym = sym_lookup($3->opt1);
+          char * base = get_base_name($3->code);
+          Symbol * sym = sym_lookup(base);
+          free(base);
           char fmt[8] = "%d";
           if (sym) {
               if (sym->type == TYPE_FLOAT)  strcpy(fmt, "%f");
@@ -552,16 +581,20 @@ var
           if (!sym)
               fprintf(stderr, "[ERRO SEMANTICO] Linha %d: '%s' nao declarado\n", linha_atual, $1);
           char * t = sym ? strdup(type_name(sym->type)) : strdup("desconhecido");
-          $$ = createRecord($1, $1);   /* opt1 guarda o nome para lookup posterior */
+          $$ = createRecord($1, t);   /* code = nome C, opt1 = tipo */
           /* reuse: code = nome C, opt1 = nome para lookup */
           free(t); free($1);
       }
     | IDENTIFICADOR ABRE_COLCHETES expr FECHA_COLCHETES
       {
+          Symbol * sym = sym_lookup($1);
+          if (!sym)
+              fprintf(stderr, "[ERRO SEMANTICO] Linha %d: '%s' nao declarado\n", linha_atual, $1);
+          char * t = sym ? strdup(type_name(sym->type)) : strdup("desconhecido");
           char * s = cat($1, "[", $3->code, "]", "");
           freeRecord($3);
-          $$ = createRecord(s, $1);
-          free(s); free($1);
+          $$ = createRecord(s, t);
+          free(s); free($1); free(t);
       }
     ;
 
@@ -587,6 +620,17 @@ char * cat(char *s1, char *s2, char *s3, char *s4, char *s5) {
     if (!out) { fprintf(stderr, "Sem memoria\n"); exit(1); }
     sprintf(out, "%s%s%s%s%s", s1, s2, s3, s4, s5);
     return out;
+}
+
+char * get_base_name(const char * name) {
+    char * p = strchr(name, '[');
+    if (!p) return strdup(name);
+    int len = p - name;
+    char * base = malloc(len + 1);
+    if (!base) { fprintf(stderr, "Sem memoria\n"); exit(1); }
+    strncpy(base, name, len);
+    base[len] = '\0';
+    return base;
 }
 
 int main(int argc, char ** argv) {
