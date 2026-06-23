@@ -22,7 +22,7 @@ echo "Gerando Lexer (Flex)..."
 flex -o "$LEXER_OUT" "$LEXER_SRC"
 
 echo "Compilando com GCC..."
-gcc -Wall \
+gcc -Wall -Wno-discarded-qualifiers \
     "$LEXER_OUT" \
     "$PARSER_OUT_C" \
     "$TABELA_SRC" \

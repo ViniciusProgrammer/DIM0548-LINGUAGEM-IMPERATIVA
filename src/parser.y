@@ -10,11 +10,11 @@ extern int yylex();
 extern int linha_atual;
 extern int coluna_atual;
 extern char* yytext;
+extern FILE * yyout;
 
 void yyerror(const char *s);
 
 /* Saída gerada */
-FILE * yyout;
 
 /* Concatena até 5 strings em uma nova string alocada */
 char * cat(char *s1, char *s2, char *s3, char *s4, char *s5);
@@ -59,8 +59,8 @@ static char * c_includes =
 %type <rec> decl assign if_stmt loop_stmt return_stmt io_stmt call_stmt
 %type <rec> expr logical_or logical_and equality relational additive
 %type <rec> multiplicative unary primary call_expr var constant
-%type <rec> arg_list_opt arg_list
-%type <sValue> type sub_type return_type_opt ref_opt assign_op
+%type <rec> arg_list_opt arg_list condition
+%type <sValue> type sub_type return_type_opt ref_opt assign_op assign_init_opt
 
 %start program
 
@@ -614,6 +614,7 @@ int main(int argc, char ** argv) {
     if (!yyout) { perror(argv[2]); return 1; }
 
     extern FILE * yyin;
+    extern FILE * yyout;
     yyin = fin;
 
     symtable_init();
