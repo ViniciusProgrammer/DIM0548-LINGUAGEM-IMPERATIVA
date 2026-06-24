@@ -1,0 +1,19 @@
+funcao mdc(n: Inteiro, m: Inteiro) -> Inteiro
+inicio
+    se (n == 0) inicio
+        retorne m
+    fim_se
+    se (m == 0) inicio
+        retorne n
+    fim_se
+    se (m > n) inicio
+        retorne mdc(n, m % n)
+    fim_se
+    retorne mdc(m, n % m)
+fim
+
+procedimento main() inicio
+    resultado: Inteiro = 0
+    resultado = mdc(12, 8)
+    Escrever(resultado)
+fim
