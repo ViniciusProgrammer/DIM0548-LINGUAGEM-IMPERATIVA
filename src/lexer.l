@@ -117,7 +117,7 @@ TEXTO       \"([^\\\"\n]|\\.)*\"
 "]"             { RETORNA(FECHA_COLCHETES); }
 "{"             { RETORNA(ABRE_CHAVES); }
 "}"             { RETORNA(FECHA_CHAVES); }
-
+"."             { RETORNA(PONTO); }
  /* ── Identificadores (carregam valor) — APÓS todas as palavras reservadas ── */
 {ID}            { RETORNA_STR(IDENTIFICADOR); }
 

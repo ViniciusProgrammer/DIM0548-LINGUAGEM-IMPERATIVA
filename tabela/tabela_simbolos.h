@@ -10,6 +10,7 @@ typedef enum {
     TYPE_INT,
     TYPE_FLOAT,
     TYPE_STRING,
+    TYPE_RATIONAL,
     TYPE_VOID,
     TYPE_UNKNOWN
 } VarType;
