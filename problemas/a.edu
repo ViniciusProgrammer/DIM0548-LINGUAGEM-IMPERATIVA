@@ -1,0 +1,97 @@
+// PROBLEMA 3: Soma e produto de matrizes (simuladas como vetores 1D)
+// Matriz A[i][j] = vetorA[i*cols + j]
+
+funcao lerMatriz(ref v: Inteiro[], linhas: Inteiro, cols: Inteiro) -> Inteiro inicio
+    i: Inteiro = 0
+    j: Inteiro = 0
+    enquanto (i < linhas) inicio
+        j = 0
+        enquanto (j < cols) inicio
+            v[i * cols + j] = LerInteiro()
+            j += 1
+        fim_enquanto
+        i += 1
+    fim_enquanto
+    retorne 0
+fim
+
+procedimento imprimirMatriz(ref v: Inteiro[], linhas: Inteiro, cols: Inteiro) inicio
+    i: Inteiro = 0
+    j: Inteiro = 0
+    enquanto (i < linhas) inicio
+        j = 0
+        enquanto (j < cols) inicio
+            Escrever(v[i * cols + j])
+            j += 1
+        fim_enquanto
+        i += 1
+    fim_enquanto
+fim
+
+procedimento somaMatrizes(ref a: Inteiro[], ref b: Inteiro[], ref res: Inteiro[], n: Inteiro) inicio
+    i: Inteiro = 0
+    enquanto (i < n) inicio
+        res[i] = a[i] + b[i]
+        i += 1
+    fim_enquanto
+fim
+
+procedimento produtoMatrizes(ref a: Inteiro[], ref b: Inteiro[], ref res: Inteiro[], linhas: Inteiro, cols: Inteiro, colsB: Inteiro) inicio
+    i: Inteiro = 0
+    j: Inteiro = 0
+    k: Inteiro = 0
+    enquanto (i < linhas) inicio
+        j = 0
+        enquanto (j < colsB) inicio
+            res[i * colsB + j] = 0
+            k = 0
+            enquanto (k < cols) inicio
+                res[i * colsB + j] += a[i * cols + k] * b[k * colsB + j]
+                k += 1
+            fim_enquanto
+            j += 1
+        fim_enquanto
+        i += 1
+    fim_enquanto
+fim
+
+procedimento main() inicio
+    linhasA: Inteiro
+    colsA: Inteiro
+    linhasB: Inteiro
+    colsB: Inteiro
+    matA: Inteiro[100]
+    matB: Inteiro[100]
+    matSoma: Inteiro[100]
+    matProd: Inteiro[100]
+
+    Escrever("Linhas de A:")
+    linhasA = LerInteiro()
+    Escrever("Colunas de A:")
+    colsA = LerInteiro()
+    Escrever("Linhas de B:")
+    linhasB = LerInteiro()
+    Escrever("Colunas de B:")
+    colsB = LerInteiro()
+
+    Escrever("Elementos de A:")
+    lerMatriz(matA, linhasA, colsA)
+    Escrever("Elementos de B:")
+    lerMatriz(matB, linhasB, colsB)
+
+    se (linhasA == linhasB && colsA == colsB) inicio
+        Escrever("Soma:")
+        somaMatrizes(matA, matB, matSoma, linhasA * colsA)
+        imprimirMatriz(matSoma, linhasA, colsA)
+    senao inicio
+        Escrever("Soma impossivel: dimensoes diferentes")
+    fim_se
+
+    se (colsA == linhasB) inicio
+        Escrever("Produto:")
+        produtoMatrizes(matA, matB, matProd, linhasA, colsA, colsB)
+        imprimirMatriz(matProd, linhasA, colsB)
+    senao inicio
+        Escrever("Produto impossivel: colunas de A != linhas de B")
+    fim_se
+fim

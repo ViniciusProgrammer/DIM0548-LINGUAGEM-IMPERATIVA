@@ -1,0 +1,30 @@
+// PROBLEMA 5: MDC com passagem por referencia
+procedimento mdc(n: Inteiro, m: Inteiro, ref r: Inteiro) inicio
+    se (m % n == 0) inicio
+        r = n
+    senao inicio
+        se (n % m == 0) inicio
+            r = m
+        senao inicio
+            se (m > n) inicio
+                mdc(n, m % n, r)
+            senao inicio
+                mdc(m, n % m, r)
+            fim_se
+        fim_se
+    fim_se
+fim
+
+procedimento main() inicio
+    a: Inteiro
+    b: Inteiro
+    resultado: Inteiro = 0
+
+    Escrever("Digite o primeiro numero:")
+    a = LerInteiro()
+    Escrever("Digite o segundo numero:")
+    b = LerInteiro()
+    mdc(a, b, resultado)
+    Escrever("MDC:")
+    Escrever(resultado)
+fim
