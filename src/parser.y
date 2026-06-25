@@ -23,7 +23,8 @@ char * cat(char *s1, char *s2, char *s3, char *s4, char *s5);
 static char * c_includes =
     "#include <stdio.h>\n"
     "#include <stdlib.h>\n"
-    "#include <string.h>\n\n";
+    "#include <string.h>\n\n"
+    "typedef struct { int numerador; int denominador; } rational_t;\n\n";
 %}
 
 %define parse.error verbose
@@ -44,7 +45,7 @@ static char * c_includes =
 %token OP_LOGICO_NAO OP_IGUAL OP_DIFERENTE OP_MAIOR_IGUAL OP_MENOR_IGUAL
 %token SETA_RETORNO OP_ATRIB_SOMA OP_ATRIB_SUB OP_ATRIB_MUL OP_ATRIB_DIV
 %token PONTO_E_VIRGULA VIRGULA DOIS_PONTOS
-%token ABRE_PARENTESES FECHA_PARENTESES ABRE_COLCHETES FECHA_COLCHETES ABRE_CHAVES FECHA_CHAVES
+%token ABRE_PARENTESES FECHA_PARENTESES ABRE_COLCHETES FECHA_COLCHETES ABRE_CHAVES FECHA_CHAVES PONTO
 
 /* ── Tokens com valor de string ── */
 %token <sValue> IDENTIFICADOR
@@ -165,6 +166,7 @@ type
     | TIPO_REAL     { $$ = strdup("float");  }
     | TIPO_TEXTO    { $$ = strdup("char*");  }
     | TIPO_BOOLEANO { $$ = strdup("int");    }
+    | IDENTIFICADOR { $$ = $1;                 }
     ;
 
 main_program
@@ -250,14 +252,19 @@ assign
     : var assign_op expr
       {
           /* Verificação de tipo */
-          char * base = get_base_name($1->code);
-          Symbol * sym = sym_lookup(base);
-          if (!sym)
-              fprintf(stderr, "[ERRO SEMANTICO] Linha %d: '%s' nao declarado\n", linha_atual, base);
-          else if (!types_compatible(sym->type, type_from_string($3->opt1)) &&
-                   type_from_string($3->opt1) != TYPE_UNKNOWN)
+          VarType left_type = type_from_string($1->opt1);
+          if (left_type == TYPE_UNKNOWN) {
+              char * base = get_base_name($1->code);
+              Symbol * sym = sym_lookup(base);
+              if (!sym)
+                  fprintf(stderr, "[ERRO SEMANTICO] Linha %d: '%s' nao declarado\n", linha_atual, base);
+              free(base);
+          } else if (!types_compatible(left_type, type_from_string($3->opt1)) &&
+                     type_from_string($3->opt1) != TYPE_UNKNOWN) {
+              char * base = get_base_name($1->code);
               fprintf(stderr, "[ERRO SEMANTICO] Linha %d: tipos incompativeis em '%s'\n", linha_atual, base);
-          free(base);
+              free(base);
+          }
 
           char * s = cat($1->code, $2, $3->code, ";\n", "");
           freeRecord($1); free($2); freeRecord($3);
@@ -596,6 +603,21 @@ var
           $$ = createRecord(s, t);
           free(s); free($1); free(t);
       }
+    | IDENTIFICADOR PONTO IDENTIFICADOR
+      {
+          Symbol * sym = sym_lookup($1);
+          if (!sym)
+              fprintf(stderr, "[ERRO SEMANTICO] Linha %d: '%s' nao declarado\n", linha_atual, $1);
+          VarType field_type = TYPE_UNKNOWN;
+          if (sym && sym->type == TYPE_RATIONAL) {
+              if (strcmp($3, "numerador") == 0 || strcmp($3, "denominador") == 0)
+                  field_type = TYPE_INT;
+          }
+          char * t = field_type != TYPE_UNKNOWN ? strdup(type_name(field_type)) : strdup("desconhecido");
+          char * s = cat($1, ".", $3, "", "");
+          $$ = createRecord(s, t);
+          free(s); free($1); free($3); free(t);
+      }
     ;
 
 constant
@@ -623,8 +645,14 @@ char * cat(char *s1, char *s2, char *s3, char *s4, char *s5) {
 }
 
 char * get_base_name(const char * name) {
-    char * p = strchr(name, '[');
+    char * p1 = strchr(name, '[');
+    char * p2 = strchr(name, '.');
+    char * p = NULL;
+    if (p1 && p2) p = p1 < p2 ? p1 : p2;
+    else if (p1) p = p1;
+    else if (p2) p = p2;
     if (!p) return strdup(name);
+
     int len = p - name;
     char * base = malloc(len + 1);
     if (!base) { fprintf(stderr, "Sem memoria\n"); exit(1); }

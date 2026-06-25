@@ -121,12 +121,13 @@ Symbol * sym_lookup_local(const char * name) {
 
 const char * type_name(VarType t) {
     switch (t) {
-        case TYPE_BOOL:    return "bool";
-        case TYPE_INT:     return "int";
-        case TYPE_FLOAT:   return "float";
-        case TYPE_STRING:  return "char*";
-        case TYPE_VOID:    return "void";
-        default:           return "desconhecido";
+        case TYPE_BOOL:     return "bool";
+        case TYPE_INT:      return "int";
+        case TYPE_FLOAT:    return "float";
+        case TYPE_STRING:   return "char*";
+        case TYPE_RATIONAL: return "rational_t";
+        case TYPE_VOID:     return "void";
+        default:            return "desconhecido";
     }
 }
 
@@ -135,6 +136,7 @@ VarType type_from_string(const char * s) {
     if (strcmp(s, "int")   == 0) return TYPE_INT;
     if (strcmp(s, "float") == 0) return TYPE_FLOAT;
     if (strcmp(s, "texto") == 0 || strcmp(s, "char*") == 0) return TYPE_STRING;
+    if (strcmp(s, "rational_t") == 0) return TYPE_RATIONAL;
     if (strcmp(s, "vazio") == 0 || strcmp(s, "void") == 0) return TYPE_VOID;
     
     return TYPE_UNKNOWN;

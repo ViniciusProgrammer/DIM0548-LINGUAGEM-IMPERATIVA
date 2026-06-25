@@ -1,0 +1,194 @@
+funcao mdc(a: Inteiro, b: Inteiro) -> Inteiro
+inicio
+    se (b == 0) inicio
+        retorne a
+    fim_se
+    retorne mdc(b, a % b)
+fim
+
+funcao criar_racional(a: Inteiro, b: Inteiro) -> rational_t
+inicio
+    resultado: rational_t
+    divisor: Inteiro
+    
+    se (b == 0) inicio
+        resultado.numerador = 0
+        resultado.denominador = 1
+        retorne resultado
+    fim_se
+    
+    divisor = mdc(a, b)
+    resultado.numerador = a / divisor
+    resultado.denominador = b / divisor
+    retorne resultado
+fim
+
+funcao racionais_iguais(r1: rational_t, r2: rational_t) -> Booleano
+inicio
+    se (r1.numerador * r2.denominador == r2.numerador * r1.denominador) inicio
+        retorne Verdadeiro
+    fim_se
+    retorne Falso
+fim
+
+funcao somar_racionais(r1: rational_t, r2: rational_t) -> rational_t
+inicio
+    resultado: rational_t
+    num: Inteiro
+    den: Inteiro
+    divisor: Inteiro
+    
+    num = r1.numerador * r2.denominador + r1.denominador * r2.numerador
+    den = r1.denominador * r2.denominador
+    divisor = mdc(num, den)
+    resultado.numerador = num / divisor
+    resultado.denominador = den / divisor
+    retorne resultado
+fim
+
+funcao negar_racional(r: rational_t) -> rational_t
+inicio
+    resultado: rational_t
+    resultado.numerador = -r.numerador
+    resultado.denominador = r.denominador
+    retorne resultado
+fim
+
+funcao subtrair_racionais(r1: rational_t, r2: rational_t) -> rational_t
+inicio
+    resultado: rational_t
+    num: Inteiro
+    den: Inteiro
+    divisor: Inteiro
+    
+    num = r1.numerador * r2.denominador - r1.denominador * r2.numerador
+    den = r1.denominador * r2.denominador
+    divisor = mdc(num, den)
+    resultado.numerador = num / divisor
+    resultado.denominador = den / divisor
+    retorne resultado
+fim
+
+funcao multiplicar_racionais(r1: rational_t, r2: rational_t) -> rational_t
+inicio
+    resultado: rational_t
+    divisor: Inteiro
+    
+    resultado.numerador = r1.numerador * r2.numerador
+    resultado.denominador = r1.denominador * r2.denominador
+    divisor = mdc(resultado.numerador, resultado.denominador)
+    resultado.numerador = resultado.numerador / divisor
+    resultado.denominador = resultado.denominador / divisor
+    retorne resultado
+fim
+
+funcao inverso_racional(r: rational_t) -> rational_t
+inicio
+    resultado: rational_t
+    
+    se (r.numerador == 0) inicio
+        resultado.numerador = 0
+        resultado.denominador = 1
+        retorne resultado
+    fim_se
+    resultado.numerador = r.denominador
+    resultado.denominador = r.numerador
+    retorne resultado
+fim
+
+funcao dividir_racionais(r1: rational_t, r2: rational_t) -> rational_t
+inicio
+    resultado: rational_t
+    num: Inteiro
+    den: Inteiro
+    divisor: Inteiro
+    
+    se (r2.numerador == 0) inicio
+        resultado.numerador = 0
+        resultado.denominador = 1
+        retorne resultado
+    fim_se
+    
+    num = r1.numerador * r2.denominador
+    den = r1.denominador * r2.numerador
+    divisor = mdc(num, den)
+    resultado.numerador = num / divisor
+    resultado.denominador = den / divisor
+    retorne resultado
+fim
+
+procedimento main() inicio
+    a: rational_t = criar_racional(1, 2)
+    b: rational_t = criar_racional(3, 4)
+    soma: rational_t
+    negacao: rational_t
+    subtracao: rational_t
+    produto: rational_t
+    inverso: rational_t
+    divisao: rational_t
+    igual: Booleano
+    
+    Escrever("Racionais criados:")
+    Escrever("a = ")
+    Escrever(a.numerador)
+    Escrever("/")
+    Escrever(a.denominador)
+    Escrever("")
+    Escrever("b = ")
+    Escrever(b.numerador)
+    Escrever("/")
+    Escrever(b.denominador)
+    Escrever("")
+    
+    igual = racionais_iguais(a, b)
+    Escrever("a == b? ")
+    se (igual == Verdadeiro) inicio
+        Escrever("Verdadeiro")
+    senao inicio
+        Escrever("Falso")
+    fim
+    fim_se
+    Escrever("")
+    
+    soma = somar_racionais(a, b)
+    Escrever("Soma = ")
+    Escrever(soma.numerador)
+    Escrever("/")
+    Escrever(soma.denominador)
+    Escrever("")
+    
+    negacao = negar_racional(a)
+    Escrever("Negacao de a = ")
+    Escrever(negacao.numerador)
+    Escrever("/")
+    Escrever(negacao.denominador)
+    Escrever("")
+    
+    subtracao = subtrair_racionais(a, b)
+    Escrever("Subtracao = ")
+    Escrever(subtracao.numerador)
+    Escrever("/")
+    Escrever(subtracao.denominador)
+    Escrever("")
+    
+    produto = multiplicar_racionais(a, b)
+    Escrever("Produto = ")
+    Escrever(produto.numerador)
+    Escrever("/")
+    Escrever(produto.denominador)
+    Escrever("")
+    
+    inverso = inverso_racional(a)
+    Escrever("Inverso de a = ")
+    Escrever(inverso.numerador)
+    Escrever("/")
+    Escrever(inverso.denominador)
+    Escrever("")
+    
+    divisao = dividir_racionais(a, b)
+    Escrever("Divisao = ")
+    Escrever(divisao.numerador)
+    Escrever("/")
+    Escrever(divisao.denominador)
+    Escrever("")
+fim
