@@ -1,0 +1,102 @@
+procedimento main() inicio
+    linhasA: Inteiro = 0
+    colunasA: Inteiro = 0
+    linhasB: Inteiro = 0
+    colunasB: Inteiro = 0
+
+    matA: Inteiro[100]
+    matB: Inteiro[100]
+    soma: Inteiro[100]
+    prod: Inteiro[100]
+
+    i: Inteiro = 0
+    j: Inteiro = 0
+    k: Inteiro = 0
+    acum: Inteiro = 0
+
+    EscreverSemQuebra("Linhas da matriz A:")
+    Ler(linhasA)
+    EscreverSemQuebra("Colunas da matriz A:")
+    Ler(colunasA)
+
+    i = 0
+    enquanto (i < linhasA) inicio
+        j = 0
+        enquanto (j < colunasA) inicio
+            EscreverSemQuebra("A[")
+            EscreverSemQuebra(i)
+            EscreverSemQuebra("][")
+            EscreverSemQuebra(j)
+            EscreverSemQuebra("]: ")
+            Ler(matA[i * colunasA + j])
+            j = j + 1
+        fim_enquanto
+        i = i + 1
+    fim_enquanto
+
+    EscreverSemQuebra("Linhas da matriz B:")
+    Ler(linhasB)
+    EscreverSemQuebra("Colunas da matriz B:")
+    Ler(colunasB)
+
+    i = 0
+    enquanto (i < linhasB) inicio
+        j = 0
+        enquanto (j < colunasB) inicio
+            EscreverSemQuebra("B[")
+            EscreverSemQuebra(i)
+            EscreverSemQuebra("][")
+            EscreverSemQuebra(j)
+            EscreverSemQuebra("]: ")
+            Ler(matB[i * colunasB + j])
+            j = j + 1
+        fim_enquanto
+        i = i + 1
+    fim_enquanto
+
+    // Soma: so e possivel se as dimensoes forem iguais
+    se (linhasA == linhasB && colunasA == colunasB) inicio
+        EscreverSemQuebra("Soma das matrizes:")
+        i = 0
+        enquanto (i < linhasA) inicio
+            j = 0
+            enquanto (j < colunasA) inicio
+                soma[i * colunasA + j] = matA[i * colunasA + j] + matB[i * colunasB + j]
+                EscreverSemQuebra(soma[i * colunasA + j])
+                EscreverSemQuebra(" ")
+                j = j + 1
+            fim_enquanto
+            Escrever("")
+            i = i + 1
+        fim_enquanto
+    senao inicio
+        Escrever("Soma impossivel: as matrizes possuem dimensoes diferentes.")
+    fim
+    fim_se
+
+    // Produto: so e possivel se colunasA == linhasB
+    se (colunasA == linhasB) inicio
+        EscreverSemQuebra("Produto das matrizes:")
+        i = 0
+        enquanto (i < linhasA) inicio
+            j = 0
+            enquanto (j < colunasB) inicio
+                acum = 0
+                k = 0
+                enquanto (k < colunasA) inicio
+                    acum = acum + matA[i * colunasA + k] * matB[k * colunasB + j]
+                    k = k + 1
+                fim_enquanto
+                prod[i * colunasB + j] = acum
+                EscreverSemQuebra(prod[i * colunasB + j])
+                EscreverSemQuebra(" ")
+                j = j + 1
+            fim_enquanto
+            Escrever("")
+            i = i + 1
+        fim_enquanto
+    senao inicio
+        Escrever("Produto impossivel: colunas de A diferem das linhas de B.")
+    fim
+    fim_se
+fim
