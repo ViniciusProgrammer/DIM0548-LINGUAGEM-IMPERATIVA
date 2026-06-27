@@ -55,9 +55,9 @@ p5: problemas/problema5.edu
 	$(COMPILER) problemas/problema5.edu saidas/p5.c
 	$(CC) saidas/p5.c -o saidas/p5
 
-p6: problemas/problema6.edu
+p6: compiler problemas/problema06.edu | saidas/
 	@echo "\n=== Compilando Problema 6 ==="
-	$(COMPILER) problemas/problema6.edu saidas/p6.c
+	$(COMPILER) problemas/problema06.edu saidas/p6.c
 	$(CC) saidas/p6.c -o saidas/p6
 
 # ── Rodar todos os problemas ─────────────────────────────────────
