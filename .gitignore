@@ -10,3 +10,6 @@ analisador_sintatico
 .vscode/
 *.o
 compiler
+prog
+saida.c
+saida/
