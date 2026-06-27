@@ -14,6 +14,7 @@ extern FILE * yyout;
 
 void yyerror(const char *s);
 char * get_base_name(const char * name);
+char * generate_write_code(struct record * expression, int append_newline);
 
 /* Saída gerada */
 
@@ -39,7 +40,7 @@ static char * c_includes =
 %token SE SENAO FIM_SE ENQUANTO FIM_ENQUANTO REPETIR ATE INICIO FIM
 %token PROCEDIMENTO FUNCAO RETORNE MODIFICADOR_REF MAIN
 %token CONSTANTE
-%token ESCREVER LER
+%token ESCREVER ESCREVER_SEM_QUEBRA LER
 %token OP_SOMA OP_SUBTRACAO OP_MULTIPLICACAO OP_DIVISAO OP_MODULO
 %token SINAL_IGUALDADE OP_MAIOR OP_MENOR OP_LOGICO_E OP_LOGICO_OU
 %token OP_LOGICO_NAO OP_IGUAL OP_DIFERENTE OP_MAIOR_IGUAL OP_MENOR_IGUAL
@@ -60,7 +61,7 @@ static char * c_includes =
 %type <rec> expr logical_or logical_and equality relational additive
 %type <rec> multiplicative unary primary call_expr var constant
 %type <rec> arg_list_opt arg_list condition
-%type <sValue> type sub_type return_type_opt ref_opt assign_op assign_init_opt
+%type <sValue> type sub_type return_type_opt ref_opt assign_op assign_init_opt array_decl_opt
 
 %start program
 
@@ -217,8 +218,10 @@ decl
       {
           if (!sym_insert($1, type_from_string($3), 0, TYPE_VOID))
               fprintf(stderr, "[ERRO SEMANTICO] Linha %d: '%s' ja declarado\n", linha_atual, $1);
-          char * s = cat($3, " ", $1, $5 ? $5 : "", ";\n");
-          free($1); free($3); free($5);
+          char * declaration = cat($3, " ", $1, $4, "");
+          char * s = cat(declaration, $5 ? $5 : "", ";\n", "", "");
+          free(declaration);
+          free($1); free($3); free($4); free($5);
           $$ = createRecord(s, ""); free(s);
       }
     | CONSTANTE IDENTIFICADOR DOIS_PONTOS type assign_init_opt
@@ -234,7 +237,12 @@ decl
 
 array_decl_opt
     : %empty
+      { $$ = strdup(""); }
     | ABRE_COLCHETES constant FECHA_COLCHETES
+      {
+          $$ = cat("[", $2->code, "]", "", "");
+          freeRecord($2);
+      }
     ;
 
 assign_init_opt
@@ -470,6 +478,18 @@ io_stmt
           freeRecord($3);
           $$ = createRecord(s, ""); free(s);
       }
+    | ESCREVER_SEM_QUEBRA ABRE_PARENTESES expr FECHA_PARENTESES PONTO_E_VIRGULA
+      {
+          char * s = generate_write_code($3, 0);
+          freeRecord($3);
+          $$ = createRecord(s, ""); free(s);
+      }
+    | ESCREVER_SEM_QUEBRA ABRE_PARENTESES expr FECHA_PARENTESES
+      {
+          char * s = generate_write_code($3, 0);
+          freeRecord($3);
+          $$ = createRecord(s, ""); free(s);
+      }
     | LER ABRE_PARENTESES var FECHA_PARENTESES PONTO_E_VIRGULA
       {
           char * base = get_base_name($3->code);
@@ -659,6 +679,32 @@ char * get_base_name(const char * name) {
     strncpy(base, name, len);
     base[len] = '\0';
     return base;
+}
+
+char * generate_write_code(struct record * expression, int append_newline) {
+    VarType type = type_from_string(expression->opt1);
+    const char * suffix = append_newline ? "\\n" : "";
+
+    if (type == TYPE_UNKNOWN) {
+        char * base = get_base_name(expression->code);
+        Symbol * symbol = sym_lookup(base);
+        free(base);
+        if (symbol) type = symbol->type;
+    }
+
+    char format[16];
+    if (expression->code[0] == '"' || type == TYPE_STRING)
+        sprintf(format, "\"%%s%s\"", suffix);
+    else if (type == TYPE_FLOAT)
+        sprintf(format, "\"%%f%s\"", suffix);
+    else
+        sprintf(format, "\"%%d%s\"", suffix);
+
+    if (expression->code[0] == '"' || type == TYPE_STRING)
+        return cat("printf(", format, ", ", expression->code, ");\n");
+    if (type == TYPE_FLOAT)
+        return cat("printf(", format, ", (float)(", expression->code, "));\n");
+    return cat("printf(", format, ", (int)(", expression->code, "));\n");
 }
 
 int main(int argc, char ** argv) {

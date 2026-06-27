@@ -40,9 +40,9 @@ p2: problemas/problema02.edu
 	$(COMPILER) problemas/problema02.edu saidas/p2.c
 	$(CC) saidas/p2.c -o saidas/p2
 
-p3: problemas/problema3.edu
+p3: compiler problemas/problema03.edu | saidas/
 	@echo "\n=== Compilando Problema 3 ==="
-	$(COMPILER) problemas/problema3.edu saidas/p3.c
+	$(COMPILER) problemas/problema03.edu saidas/p3.c
 	$(CC) saidas/p3.c -o saidas/p3
 
 p4: problemas/problema4.edu
@@ -75,7 +75,7 @@ rodar: problemas
 	@echo "\n=============================="
 	@echo "=== Rodando Problema 3      ==="
 	@echo "=============================="
-	@echo "2 2 2 2 1 2 3 4 1 2 3 4" | saidas/p3
+	@echo "2 2 1 2 3 4 2 2 1 2 3 4" | saidas/p3
 
 	@echo "\n=============================="
 	@echo "=== Rodando Problema 4      ==="

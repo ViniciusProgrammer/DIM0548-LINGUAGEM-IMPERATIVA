@@ -14,41 +14,41 @@ procedimento main() inicio
     k: Inteiro = 0
     acum: Inteiro = 0
 
-    Escrever("Linhas da matriz A:")
-    linhasA = LerInteiro()
-    Escrever("Colunas da matriz A:")
-    colunasA = LerInteiro()
+    EscreverSemQuebra("Linhas da matriz A: ")
+    Ler(linhasA)
+    EscreverSemQuebra("Colunas da matriz A: ")
+    Ler(colunasA)
 
     i = 0
     enquanto (i < linhasA) inicio
         j = 0
         enquanto (j < colunasA) inicio
-            Escrever("A[")
-            Escrever(i)
-            Escrever("][")
-            Escrever(j)
-            Escrever("]: ")
-            matA[i * colunasA + j] = LerInteiro()
+            EscreverSemQuebra("A[")
+            EscreverSemQuebra(i)
+            EscreverSemQuebra("][")
+            EscreverSemQuebra(j)
+            EscreverSemQuebra("]: ")
+            Ler(matA[i * colunasA + j])
             j = j + 1
         fim_enquanto
         i = i + 1
     fim_enquanto
 
-    Escrever("Linhas da matriz B:")
-    linhasB = LerInteiro()
-    Escrever("Colunas da matriz B:")
-    colunasB = LerInteiro()
+    EscreverSemQuebra("Linhas da matriz B: ")
+    Ler(linhasB)
+    EscreverSemQuebra("Colunas da matriz B: ")
+    Ler(colunasB)
 
     i = 0
     enquanto (i < linhasB) inicio
         j = 0
         enquanto (j < colunasB) inicio
-            Escrever("B[")
-            Escrever(i)
-            Escrever("][")
-            Escrever(j)
-            Escrever("]: ")
-            matB[i * colunasB + j] = LerInteiro()
+            EscreverSemQuebra("B[")
+            EscreverSemQuebra(i)
+            EscreverSemQuebra("][")
+            EscreverSemQuebra(j)
+            EscreverSemQuebra("]: ")
+            Ler(matB[i * colunasB + j])
             j = j + 1
         fim_enquanto
         i = i + 1
@@ -62,8 +62,8 @@ procedimento main() inicio
             j = 0
             enquanto (j < colunasA) inicio
                 soma[i * colunasA + j] = matA[i * colunasA + j] + matB[i * colunasB + j]
-                Escrever(soma[i * colunasA + j])
-                Escrever(" ")
+                EscreverSemQuebra(soma[i * colunasA + j])
+                EscreverSemQuebra(" ")
                 j = j + 1
             fim_enquanto
             Escrever("")
@@ -71,6 +71,7 @@ procedimento main() inicio
         fim_enquanto
     senao inicio
         Escrever("Soma impossivel: as matrizes possuem dimensoes diferentes.")
+    fim
     fim_se
 
     // Produto: so e possivel se colunasA == linhasB
@@ -87,8 +88,8 @@ procedimento main() inicio
                     k = k + 1
                 fim_enquanto
                 prod[i * colunasB + j] = acum
-                Escrever(prod[i * colunasB + j])
-                Escrever(" ")
+                EscreverSemQuebra(prod[i * colunasB + j])
+                EscreverSemQuebra(" ")
                 j = j + 1
             fim_enquanto
             Escrever("")
@@ -96,5 +97,6 @@ procedimento main() inicio
         fim_enquanto
     senao inicio
         Escrever("Produto impossivel: colunas de A diferem das linhas de B.")
+    fim
     fim_se
 fim

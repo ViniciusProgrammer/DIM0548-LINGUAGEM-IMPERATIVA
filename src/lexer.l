@@ -53,6 +53,7 @@ TEXTO       \"([^\\\"\n]|\\.)*\"
 
  /* ── Palavras Reservadas ── */
 "main"          { RETORNA(MAIN); }
+"EscreverSemQuebra" { RETORNA(ESCREVER_SEM_QUEBRA); }
 "Escrever"      { RETORNA(ESCREVER); }
 "Ler"           { RETORNA(LER); }
 "se"            { RETORNA(SE); }
