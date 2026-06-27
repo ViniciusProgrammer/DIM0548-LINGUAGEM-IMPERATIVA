@@ -1,0 +1,126 @@
+// PROBLEMA 6: Arvore binaria de busca com chaves inteiras.
+// A arvore e representada por vetores paralelos. Em esq e dir,
+// o valor -1 indica que o no nao possui aquele filho.
+
+procedimento main() inicio
+    chaves: Inteiro[100]
+    esq: Inteiro[100]
+    dir: Inteiro[100]
+    niveis: Inteiro[100]
+    fila: Inteiro[100]
+
+    quantidade: Inteiro = 0
+    tamanho: Inteiro = 0
+    raiz: Inteiro = -1
+    valor: Inteiro = 0
+    atual: Inteiro = 0
+    pai: Inteiro = -1
+    novo: Inteiro = 0
+    i: Inteiro = 0
+    inicioFila: Inteiro = 0
+    fimFila: Inteiro = 0
+    nivelAtual: Inteiro = -1
+
+    EscreverSemQuebra("Quantidade de valores: ")
+    Ler(quantidade)
+
+    // A) Transforma a sequencia lida em uma arvore binaria de busca.
+    enquanto (i < quantidade && tamanho < 100) inicio
+        EscreverSemQuebra("Valor: ")
+        Ler(valor)
+
+        novo = tamanho
+        chaves[novo] = valor
+        esq[novo] = -1
+        dir[novo] = -1
+        niveis[novo] = 0
+
+        se (raiz == -1) inicio
+            raiz = novo
+        senao inicio
+            atual = raiz
+            pai = -1
+
+            enquanto (atual != -1) inicio
+                pai = atual
+                se (valor <= chaves[atual]) inicio
+                    atual = esq[atual]
+                senao inicio
+                    atual = dir[atual]
+                fim
+                fim_se
+            fim_enquanto
+
+            niveis[novo] = niveis[pai] + 1
+            se (valor <= chaves[pai]) inicio
+                esq[pai] = novo
+            senao inicio
+                dir[pai] = novo
+            fim
+            fim_se
+        fim
+        fim_se
+
+        tamanho = tamanho + 1
+        i = i + 1
+    fim_enquanto
+
+    se (raiz == -1) inicio
+        Escrever("Arvore vazia.")
+    senao inicio
+        // B) A menor chave esta no no mais a esquerda.
+        atual = raiz
+        enquanto (esq[atual] != -1) inicio
+            atual = esq[atual]
+        fim_enquanto
+        EscreverSemQuebra("Chave minima: ")
+        Escrever(chaves[atual])
+        EscreverSemQuebra("Nivel da chave minima: ")
+        Escrever(niveis[atual])
+
+        // C) A maior chave esta no no mais a direita.
+        atual = raiz
+        enquanto (dir[atual] != -1) inicio
+            atual = dir[atual]
+        fim_enquanto
+        EscreverSemQuebra("Chave maxima: ")
+        Escrever(chaves[atual])
+        EscreverSemQuebra("Nivel da chave maxima: ")
+        Escrever(niveis[atual])
+
+        // D) Percurso em largura com uma fila, imprimindo nivel a nivel.
+        Escrever("Arvore nivel a nivel:")
+        fila[fimFila] = raiz
+        fimFila = fimFila + 1
+
+        enquanto (inicioFila < fimFila) inicio
+            atual = fila[inicioFila]
+            inicioFila = inicioFila + 1
+
+            se (niveis[atual] != nivelAtual) inicio
+                se (nivelAtual != -1) inicio
+                    Escrever("")
+                fim_se
+                nivelAtual = niveis[atual]
+                EscreverSemQuebra("Nivel ")
+                EscreverSemQuebra(nivelAtual)
+                EscreverSemQuebra(": ")
+            fim_se
+
+            EscreverSemQuebra(chaves[atual])
+            EscreverSemQuebra(" ")
+
+            se (esq[atual] != -1) inicio
+                fila[fimFila] = esq[atual]
+                fimFila = fimFila + 1
+            fim_se
+
+            se (dir[atual] != -1) inicio
+                fila[fimFila] = dir[atual]
+                fimFila = fimFila + 1
+            fim_se
+        fim_enquanto
+        Escrever("")
+    fim
+    fim_se
+fim
