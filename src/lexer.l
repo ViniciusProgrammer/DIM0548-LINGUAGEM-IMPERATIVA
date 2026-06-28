@@ -6,6 +6,7 @@
 
   int linha_atual  = 1;
   int coluna_atual = 1;
+  int erros_lexicos = 0;
 
   /* Retorna token simples (sem valor semântico) e atualiza coluna */
   #define RETORNA(token) \
@@ -122,6 +123,7 @@ TEXTO       \"([^\\\"\n]|\\.)*\"
 
  /* ── Erro léxico ── */
 .               {
+    erros_lexicos++;
     fprintf(stderr, "[ERRO L%d:C%d] Caractere invalido: '%s'\n",
             linha_atual, coluna_atual, yytext);
     coluna_atual++;

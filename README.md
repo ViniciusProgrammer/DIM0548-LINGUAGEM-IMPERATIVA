@@ -34,7 +34,7 @@ gcc /tmp/testes.c -o /tmp/testes
 ```
 
 ## ✅ Código de Saída
-O executável recebe os caminhos de entrada e saída, gera código C e retorna código `0` para sucesso sintático ou `1` para falha.
+O executável recebe os caminhos de entrada e saída e só publica o código C quando não há erros léxicos, sintáticos ou semânticos. O retorno é `0` para sucesso ou `1` para falha.
 
 Exemplo de saída com sucesso (Sintaxe Correta):
 ```bash
@@ -44,5 +44,5 @@ Exemplo de saída com sucesso (Sintaxe Correta):
 Exemplo de saída com falha (Erro Sintático):
 ```bash
 [ERRO SINTATICO] Linha 4, Coluna 9: syntax error proximo a 'Inteiro'
-[FALHA] Erros encontrados.
+[FALHA] Erros encontrados: 0 lexico(s), 1 sintatico(s), 0 semantico(s).
 ```
