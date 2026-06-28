@@ -5,6 +5,7 @@
 
 static Symbol * table[MAX_SYMBOLS];
 static UserType * user_types = NULL;
+static TypeAlias * type_aliases = NULL;
 
 static ScopeEntry scope_stack[MAX_SCOPES];
 static int scope_sp = 0;
@@ -26,6 +27,12 @@ void symtable_free() {
         Symbol * s = table[i];
         while (s) {
             Symbol * next = s->next;
+            ParamInfo * param = s->params;
+            while (param) {
+                ParamInfo * next_param = param->next;
+                free(param);
+                param = next_param;
+            }
             free(s);
             s = next;
         }
@@ -117,9 +124,17 @@ int sym_insert(const char * name, VarType type, int is_function, VarType ret_typ
     strncpy(sym->declared_type, type_name(type), MAX_KEY_LEN - 1);
     sym->declared_type[MAX_KEY_LEN - 1] = '\0';
     sym->is_function = is_function;
+    sym->is_const = 0;
+    sym->is_initialized = is_function ? 1 : 0;
+    sym->is_ref = 0;
+    sym->is_array = 0;
+    sym->dimensions = 0;
+    memset(sym->array_sizes, 0, sizeof(sym->array_sizes));
     sym->return_type = ret_type;
     strncpy(sym->return_declared_type, type_name(ret_type), MAX_KEY_LEN - 1);
     sym->return_declared_type[MAX_KEY_LEN - 1] = '\0';
+    sym->params = NULL;
+    sym->param_count = 0;
     sym->next = table[h];
     table[h] = sym;
     return 1;
@@ -130,6 +145,30 @@ void sym_set_declared_type(const char * name, const char * declared_type) {
     if (!sym || !declared_type) return;
     strncpy(sym->declared_type, declared_type, MAX_KEY_LEN - 1);
     sym->declared_type[MAX_KEY_LEN - 1] = '\0';
+}
+
+void sym_set_const(const char * name, int is_const) {
+    Symbol * sym = sym_lookup_local(name);
+    if (sym) sym->is_const = is_const;
+}
+
+void sym_set_initialized(const char * name, int is_initialized) {
+    Symbol * sym = sym_lookup(name);
+    if (sym) sym->is_initialized = is_initialized;
+}
+
+void sym_set_ref(const char * name, int is_ref) {
+    Symbol * sym = sym_lookup_local(name);
+    if (sym) sym->is_ref = is_ref;
+}
+
+void sym_set_array(const char * name, int dimensions, const int * sizes) {
+    Symbol * sym = sym_lookup_local(name);
+    if (!sym) return;
+    sym->is_array = dimensions > 0;
+    sym->dimensions = dimensions;
+    for (int i = 0; i < 8; i++)
+        sym->array_sizes[i] = (sizes && i < dimensions) ? sizes[i] : 0;
 }
 
 int sym_set_function_return(const char * name, VarType return_type, const char * declared_type) {
@@ -151,6 +190,54 @@ int sym_set_function_return(const char * name, VarType return_type, const char *
     return 0;
 }
 
+int sym_add_param(const char * function_name, const char * param_name,
+                  VarType type, const char * declared_type, int is_ref,
+                  int is_array, int dimensions) {
+    Symbol * function = NULL;
+    char key[MAX_KEY_LEN];
+    make_key("global", function_name, key);
+    unsigned int h = hash(key);
+    Symbol * sym = table[h];
+
+    while (sym) {
+        if (strcmp(sym->key, key) == 0 && sym->is_function) {
+            function = sym;
+            break;
+        }
+        sym = sym->next;
+    }
+
+    while (type_aliases) {
+        TypeAlias * next_alias = type_aliases->next;
+        free(type_aliases);
+        type_aliases = next_alias;
+    }
+    if (!function) return 0;
+
+    ParamInfo * param = malloc(sizeof(ParamInfo));
+    if (!param) { fprintf(stderr, "Sem memória\n"); exit(1); }
+    strncpy(param->name, param_name, MAX_KEY_LEN - 1);
+    param->name[MAX_KEY_LEN - 1] = '\0';
+    strncpy(param->declared_type,
+            declared_type ? declared_type : type_name(type), MAX_KEY_LEN - 1);
+    param->declared_type[MAX_KEY_LEN - 1] = '\0';
+    param->type = type;
+    param->is_ref = is_ref;
+    param->is_array = is_array;
+    param->dimensions = dimensions;
+    param->next = NULL;
+
+    if (!function->params) {
+        function->params = param;
+    } else {
+        ParamInfo * tail = function->params;
+        while (tail->next) tail = tail->next;
+        tail->next = param;
+    }
+    function->param_count++;
+    return 1;
+}
+
 Symbol * sym_lookup(const char * name) {
     for (int i = scope_sp - 1; i >= 0; i--) {
         char key[MAX_KEY_LEN];
@@ -163,6 +250,12 @@ Symbol * sym_lookup(const char * name) {
         }
     }
     return NULL;
+}
+
+int sym_is_addressable_expression(const char * code) {
+    if (!code || !*code) return 0;
+    if (strpbrk(code, " +-*/%<>=!&|()")) return 0;
+    return 1;
 }
 
 Symbol * sym_lookup_local(const char * name) {
@@ -198,6 +291,28 @@ UserType * user_type_lookup(const char * name) {
     while (type) {
         if (strcmp(type->name, name) == 0) return type;
         type = type->next;
+    }
+    return NULL;
+}
+
+int type_alias_insert(const char * name, const char * target) {
+    if (type_alias_lookup(name) || user_type_lookup(name)) return 0;
+    TypeAlias * alias = malloc(sizeof(TypeAlias));
+    if (!alias) { fprintf(stderr, "Sem memória\n"); exit(1); }
+    strncpy(alias->name, name, MAX_KEY_LEN - 1);
+    alias->name[MAX_KEY_LEN - 1] = '\0';
+    strncpy(alias->target, target, MAX_KEY_LEN - 1);
+    alias->target[MAX_KEY_LEN - 1] = '\0';
+    alias->next = type_aliases;
+    type_aliases = alias;
+    return 1;
+}
+
+const char * type_alias_lookup(const char * name) {
+    TypeAlias * alias = type_aliases;
+    while (alias) {
+        if (strcmp(alias->name, name) == 0) return alias->target;
+        alias = alias->next;
     }
     return NULL;
 }
@@ -247,6 +362,8 @@ const char * type_name(VarType t) {
 }
 
 VarType type_from_string(const char * s) {
+    const char * alias_target = s ? type_alias_lookup(s) : NULL;
+    if (alias_target) return type_from_string(alias_target);
     if (strcmp(s, "bool")  == 0) return TYPE_BOOL;
     if (strcmp(s, "int")   == 0) return TYPE_INT;
     if (strcmp(s, "float") == 0) return TYPE_FLOAT;
@@ -262,6 +379,8 @@ int declared_types_compatible(const char * type1, const char * type2) {
     VarType t2;
 
     if (!type1 || !type2) return 0;
+    if (type_alias_lookup(type1)) type1 = type_alias_lookup(type1);
+    if (type_alias_lookup(type2)) type2 = type_alias_lookup(type2);
     if (strcmp(type1, type2) == 0) return 1;
 
     t1 = type_from_string(type1);
