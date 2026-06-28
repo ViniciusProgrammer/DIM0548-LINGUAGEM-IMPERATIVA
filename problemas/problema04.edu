@@ -1,3 +1,8 @@
+tipo rational_t inicio
+    numerador: Inteiro
+    denominador: Inteiro
+fim
+
 funcao mdc(a: Inteiro, b: Inteiro) -> Inteiro
 inicio
     se (a < 0) inicio

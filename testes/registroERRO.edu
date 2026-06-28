@@ -1,0 +1,8 @@
+tipo Pessoa inicio
+    nome: Texto
+fim
+
+procedimento main() inicio
+    aluno: Pessoa
+    aluno.idade = 20
+fim

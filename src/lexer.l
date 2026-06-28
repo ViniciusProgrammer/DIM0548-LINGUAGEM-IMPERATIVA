@@ -71,6 +71,7 @@ TEXTO       \"([^\\\"\n]|\\.)*\"
 "retorne"       { RETORNA(RETORNE); }
 "ref"           { RETORNA(MODIFICADOR_REF); }
 "Constante"     { RETORNA(CONSTANTE); }
+"tipo"          { RETORNA(TIPO); }
 
  /* ── Tipos Primitivos (carregam valor para o parser usar) ── */
 "Inteiro"       { RETORNA_STR(TIPO_INTEIRO); }
