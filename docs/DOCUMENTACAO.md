@@ -1,8 +1,8 @@
-# 📖 Documentação — Analisador Léxico da Linguagem `.edu`
+# 📖 Documentação — Compilador da Linguagem Imperativa `.edu`
 
-**Repositório:** [ViniciusProgrammer/DIM0548-LINGUAGEM-IMPERATIVA](https://github.com/ViniciusProgrammer/DIM0548-LINGUAGEM-IMPERATIVA)
-**Disciplina:** DIM0548 — Engenharia de Linguagens
-**Tecnologias:** Flex · Bison · GCC · Shell Script (Bash)
+**Repositório:** DIM0548-LINGUAGEM-IMPERATIVA  
+**Disciplina:** DIM0548 — Engenharia de Linguagens — UFRN  
+**Tecnologias:** Flex · Bison · GCC · Make  
 
 ---
 
@@ -10,30 +10,36 @@
 
 1. [Visão Geral](#1-visão-geral)
 2. [Estrutura do Repositório](#2-estrutura-do-repositório)
-3. [Tecnologias](#3-tecnologias)
-4. [Pré-requisitos e Instalação](#4-pré-requisitos-e-instalação)
-5. [Como Compilar](#5-como-compilar)
-6. [Como Testar](#6-como-testar)
-7. [A Linguagem `.edu`](#7-a-linguagem-edu)
-8. [Especificação do Analisador Léxico](#8-especificação-do-analisador-léxico)
-9. [Tokens Reconhecidos](#9-tokens-reconhecidos)
-10. [Tratamento de Erros Léxicos](#10-tratamento-de-erros-léxicos)
-11. [Especificação do Analisador Sintático](#11-especificação-do-analisador-sintático)
-12. [Tratamento de Erros Sintáticos](#12-tratamento-de-erros-sintáticos)
-13. [Exemplos de Saída](#13-exemplos-de-saída)
-14. [Arquivos de Teste](#14-arquivos-de-teste)
-15. [Referências](#15-referências)
+3. [Pré-requisitos e Build](#3-pré-requisitos-e-build)
+4. [Como Usar o Compilador](#4-como-usar-o-compilador)
+5. [A Linguagem `.edu`](#5-a-linguagem-edu)
+6. [Análise Léxica](#6-análise-léxica)
+7. [Análise Sintática](#7-análise-sintática)
+8. [Análise Semântica e Tabela de Símbolos](#8-análise-semântica-e-tabela-de-símbolos)
+9. [Geração de Código C](#9-geração-de-código-c)
+10. [Testes](#10-testes)
+11. [Exemplos Completos](#11-exemplos-completos)
+12. [Limitações Conhecidas](#12-limitações-conhecidas)
+13. [Referências](#13-referências)
 
 ---
 
 ## 1. Visão Geral
 
-Este projeto implementa um compilador para uma linguagem imperativa educacional chamada `.edu`. O projeto foi desenvolvido como trabalho prático da disciplina **DIM0548 — Engenharia de Linguagens**.
+Este projeto implementa um **compilador completo** para a linguagem imperativa educacional `.edu`, traduzindo programas escritos em português para um subconjunto restrito de C. O objetivo pedagógico é duplo: a linguagem `.edu` ensina lógica de programação a iniciantes em português; o compilador em si é o produto prático da disciplina de Engenharia de Linguagens.
 
-- **Fase 1 (Léxica):** Lê o código-fonte e agrupa os caracteres em unidades lógicas chamadas **tokens** (palavras reservadas, identificadores, operadores).
-- **Fase 2 (Sintática):** Recebe esses tokens e verifica se eles formam frases válidas de acordo com a **gramática** da linguagem, garantindo a ordem estrutural (ex: um `se` deve ter um `fim_se`).
-- **Fase 3 (Semântica):** Registra identificadores e realiza verificações de tipos e escopos.
-- **Fase 4 (Geração):** Traduz o programa `.edu` para o subconjunto de C definido no problema 8.
+O fluxo de compilação passa pelas quatro fases clássicas:
+
+```
+fonte.edu  →  [Léxico]  →  tokens
+           →  [Sintático]  →  AST implícita
+           →  [Semântico]  →  código C anotado
+           →  [Geração]  →  saida.c
+                             ↓
+                           gcc → binário
+```
+
+O compilador retorna `0` em caso de sucesso e `1` quando há qualquer erro léxico, sintático ou semântico. O arquivo C de saída só é publicado quando todas as fases passam sem erros.
 
 ---
 
@@ -43,220 +49,352 @@ Este projeto implementa um compilador para uma linguagem imperativa educacional 
 DIM0548-LINGUAGEM-IMPERATIVA/
 │
 ├── src/
-│   ├── lexer.l          # Especificação do analisador léxico (Flex)
-│   ├── parser.y         # Especificação do analisador sintático (Bison)
-│   ├── lex.yy.c         # Código gerado pelo Flex (não editar)
-│   ├── y.tab.c          # Código C gerado pelo Bison (não editar)
-│   └── y.tab.h          # Cabeçalho gerado pelo Bison com a lista de tokens
+│   ├── lexer.l              # Especificação Flex do analisador léxico
+│   ├── parser.y             # Gramática Bison com ações semânticas e geração de código
+│   ├── lex.yy.c             # Gerado pelo Flex (não editar)
+│   ├── y.tab.c              # Gerado pelo Bison (não editar)
+│   └── y.tab.h              # Cabeçalho de tokens gerado pelo Bison (não editar)
 │
-├── docs/                # Documentação adicional
+├── tabela/
+│   ├── tabela_simbolos.h    # Interface da tabela de símbolos
+│   └── tabela_simbolos.c    # Implementação: hash, escopos, tipos, parâmetros
+│
+├── lib/
+│   ├── labels.h / labels.c  # Gerador de rótulos para goto/labels no C gerado
+│   └── record.h / record.c  # Estrutura record (code + opt1) usada nas ações do parser
+│
+├── problemas/
+│   ├── problema01.edu       # Expressão com número racional
+│   ├── problema02.edu       # Contagem por intervalos
+│   ├── problema03.edu       # Soma e produto de matrizes
+│   ├── problema04.edu       # Tipo rational_t com operações
+│   ├── problema05.edu       # QuickSort com passagem por referência
+│   └── problema06.edu       # Árvore binária de busca com vetores paralelos
 │
 ├── testes/
-│   ├── quicksort.edu       # Programa QuickSort válido
-│   ├── quicksortERRO.edu   # Programa com erros sintáticos para validação
-│   └── testes.edu          # Arquivo de teste de estruturas gerais
+│   ├── testes.edu                  # Cobertura geral da sintaxe (positivo)
+│   ├── registro.edu                # Tipos definidos pelo usuário (positivo)
+│   ├── quicksort.edu               # QuickSort completo (positivo)
+│   ├── recursos_secundarios.edu    # alias, enum, para (positivo)
+│   ├── ref_escalar.edu             # Passagem por referência escalar (positivo)
+│   ├── erro_lexico.edu             # Caractere inválido @ (negativo)
+│   ├── erro_semantico.edu          # Atribuição de tipo incompatível (negativo)
+│   ├── registroERRO.edu            # Campo inexistente em registro (negativo)
+│   ├── quicksortERRO.edu           # Erros sintáticos no QuickSort (negativo)
+│   ├── assinatura_ref_erro.edu     # Argumento ref não enderecável (negativo)
+│   ├── chamada_assinatura_erro.edu # Tipo errado em chamada de função (negativo)
+│   ├── constante_erro.edu          # Alteração de constante (negativo)
+│   └── vetor_indice_erro.edu       # Índice literal fora dos limites (negativo)
 │
-├── compilar.sh          # Script de build automatizado
-├── .gitignore
+├── makefile
+├── compilar.sh
 └── README.md
 ```
 
 ---
 
-## 3. Tecnologias
+## 3. Pré-requisitos e Build
 
-| Ferramenta | Função |
+### Dependências
+
+```bash
+# Ubuntu / Debian
+sudo apt update && sudo apt install flex bison gcc make -y
+
+# Arch Linux
+sudo pacman -S flex bison gcc make
+
+# Fedora / RHEL
+sudo dnf install flex bison gcc make
+```
+
+### Compilar o compilador
+
+```bash
+make              # gera ./compiler
+```
+
+O Makefile executa automaticamente:
+
+1. `bison -d src/parser.y -o src/y.tab.c` — gera o parser e `y.tab.h`
+2. `flex -o src/lex.yy.c src/lexer.l` — gera o scanner
+3. `gcc` linkando `lex.yy.c`, `y.tab.c`, `tabela_simbolos.c`, `labels.c` e `record.c`
+
+### Targets disponíveis
+
+| Comando | Descrição |
 |---|---|
-| **Flex** | Gerador de analisadores léxicos a partir de regras definidas no arquivo `.l` |
-| **Bison** |	Gerador do analisador sintático (LALR) a partir de regras gramaticais `.y` |
-| **GCC** | Compilador C que transforma o código gerado pelo Flex em executável binário |
-| **Bash** | Automatiza o processo de build no script `compilar.sh` |
-
-**Distribuição de linguagens no repositório:**
-
-- Yacc (`.y`): **51,4%**
-- Lex (`.l`): **38,0%**
-- Shell (`.sh`): **10,6%**
+| `make` | Compila o executável `./compiler` |
+| `make problemas` | Compila os seis programas de avaliação em `saidas/` |
+| `make test` | Executa testes positivos, negativos e QuickSort |
+| `make rodar` | Executa todos os binários compilados com entradas de exemplo |
+| `make clean` | Remove artefatos gerados (objetos, binários, C gerado) |
+| `make clean_all` | Remove também a pasta `saidas/` |
 
 ---
 
-## 4. Pré-requisitos e Instalação
-
-O projeto foi desenvolvido para **Linux**. É necessário ter o **Flex** e o **GCC** instalados.
-
-**Ubuntu / Debian:**
-```bash
-sudo apt update && sudo apt install flex bison gcc -y
-```
-
-**Arch Linux:**
-```bash
-sudo pacman -S flex bison gcc
-```
-
-**Fedora / RHEL:**
-```bash
-sudo dnf install flex bison gcc
-```
-
----
-
-## 5. Como Compilar
-
-O script `compilar.sh` automatiza todo o processo de build integrando Flex e Bison:
+## 4. Como Usar o Compilador
 
 ```bash
-# Na raiz do repositório, dê permissão de execução (apenas a primeira vez):
-chmod +x compilar.sh
+# Uso básico
+./compiler <entrada.edu> <saida.c>
 
-# Execute o script:
-./compilar.sh
-```
-
-O que o script faz:
-1. Roda o `bison -d` para gerar o parser e a lista de tokens (`y.tab.h`).
-2. Roda o `flex` para gerar o scanner.
-3. Usa o `gcc` para juntar o lexer, o parser e os módulos auxiliares no executável `compiler`.
-
----
-
-## 6. Como Testar
-
-O compilador recebe o arquivo de entrada e o caminho do arquivo C de saída como argumentos:
-
-```bash
-# Código válido
+# Exemplo completo
 ./compiler testes/quicksort.edu /tmp/quicksort.c
 gcc /tmp/quicksort.c -o /tmp/quicksort
-
-# Código propositalmente inválido
-./compiler testes/quicksortERRO.edu /tmp/quicksortERRO.c
-
-# Estruturas gerais
-./compiler testes/testes.edu /tmp/testes.c
-gcc /tmp/testes.c -o /tmp/testes
+/tmp/quicksort
 ```
 
-Para compilar os seis problemas de avaliação:
+**Saídas possíveis:**
 
-```bash
-make problemas
 ```
+[SUCESSO] Codigo C gerado em: saida.c
+```
+
+```
+[FALHA] Erros encontrados: 1 lexico(s), 0 sintatico(s), 2 semantico(s).
+```
+
+O compilador nunca sobrescreve um arquivo C de saída com código inválido. Se houver qualquer erro, o arquivo de saída é removido.
 
 ---
 
-## 7. A Linguagem `.edu`
+## 5. A Linguagem `.edu`
 
-A linguagem `.edu` é uma linguagem imperativa educacional com sintaxe em português. Ela suporta:
+### 5.1 Filosofia
 
-- Declaração de variáveis com tipos explícitos
-- Registros definidos pelo usuário com `tipo Nome inicio ... fim`
-- Estruturas de controle (`se/senao/fim_se`, `enquanto/fim_enquanto`, `repetir/ate`)
-- Definição de `procedimento` e `funcao` com parâmetros por referência (`ref`)
-- Tipo de retorno de funções declarado com o operador `->`
-- Vetores (arrays) com sintaxe `nome: Tipo[tamanho]` e acesso por `vetor[i]`
-- Literais booleanos (`Verdadeiro` / `Falso`)
-- Comentários de linha (`//`) e de bloco (`/* */`)
+A linguagem `.edu` foi projetada para o ensino introdutório de lógica de programação para o público brasileiro. Suas prioridades, em ordem, são: **legibilidade**, **facilidade de escrita**, **confiabilidade** e **custo de aprendizado reduzido**. A sintaxe é totalmente em português e estruturada por palavras-chave em vez de símbolos.
 
-**Exemplo de código `.edu`:**
+### 5.2 Tipos primitivos
 
+| Palavra-chave | Tipo C equivalente | Descrição |
+|---|---|---|
+| `Inteiro` | `int` | Número inteiro |
+| `Real` | `float` | Número de ponto flutuante |
+| `Texto` | `char*` | Cadeia de caracteres |
+| `Booleano` | `int` | Valor lógico (`Verdadeiro`/`Falso`) |
+| `Vazio` | `void` | Ausência de retorno |
+
+### 5.3 Literais
+
+| Exemplo | Tipo inferido |
+|---|---|
+| `42` | `Inteiro` |
+| `3.14` | `Real` |
+| `"ola mundo"` | `Texto` |
+| `Verdadeiro` | `Booleano` (vale `1`) |
+| `Falso` | `Booleano` (vale `0`) |
+
+### 5.4 Declaração de variáveis e constantes
+
+```edu
+nome: Tipo
+nome: Tipo = expressão
+Constante NOME: Tipo = expressão
+
+// Vetores e matrizes
+vetor: Inteiro[10]
+matriz: Real[3][4]
 ```
-// Procedimento de troca
-procedimento Trocar (ref vetor: Inteiro[], i: Inteiro, j: Inteiro) inicio
+
+Constantes são obrigatoriamente inicializadas na declaração e não podem ser alteradas posteriormente.
+
+### 5.5 Tipos definidos pelo usuário
+
+**Registros:**
+```edu
+tipo Pessoa inicio
+    nome: Texto
+    idade: Inteiro
+fim
+```
+
+**Aliases:**
+```edu
+alias Numero = Inteiro
+```
+
+**Enumerações:**
+```edu
+enum Cor inicio
+    VERMELHO,
+    VERDE,
+    AZUL
+fim
+```
+
+### 5.6 Operadores
+
+| Categoria | Operadores |
+|---|---|
+| Aritméticos | `+` `-` `*` `/` `%` |
+| Relacionais | `==` `!=` `<` `>` `<=` `>=` |
+| Lógicos | `&&` `\|\|` `!` |
+| Atribuição | `=` `+=` `-=` `*=` `/=` |
+| Concatenação | `+` (entre dois `Texto`) |
+
+Regras de tipo para operadores:
+- Operadores aritméticos exigem operandos numéricos (`Inteiro` ou `Real`).
+- `Inteiro / Inteiro` produz `Inteiro` (divisão inteira preservada).
+- Se qualquer operando for `Real`, o resultado é `Real`.
+- `&&` e `||` exigem e produzem `Booleano`; implementam curto-circuito via semântica de C.
+- `+` entre dois `Texto` gera concatenação com `edu_concat()` no C gerado.
+- Atribuição é sempre um **comando**, nunca uma expressão — sem efeitos colaterais em expressões.
+
+### 5.7 Estruturas de controle
+
+**Condicional:**
+```edu
+se (condicao) inicio
+    // ramo verdadeiro
+fim_se
+
+se (condicao) inicio
+    // ramo verdadeiro
+senao inicio
+    // ramo falso
+fim_se
+```
+
+**Laço com pré-teste:**
+```edu
+enquanto (condicao) inicio
+    // corpo
+fim_enquanto
+```
+
+**Laço com pós-teste:**
+```edu
+repetir
+    // corpo
+ate (condicao)
+```
+
+**Laço contado:**
+```edu
+para (i = 0; i < 10; i = i + 1) inicio
+    // corpo
+fim_para
+```
+
+### 5.8 Subprogramas
+
+**Procedimento** (sem retorno):
+```edu
+procedimento NomeProc(param1: Tipo1, ref param2: Tipo2) inicio
+    // corpo
+fim
+```
+
+**Função** (com retorno):
+```edu
+funcao NomeFunc(param1: Tipo1) -> TipoRetorno inicio
+    // corpo
+    retorne expressão
+fim
+```
+
+**Passagem por referência:** o modificador `ref` antes do nome do parâmetro indica passagem por referência. O compilador emite `*` na assinatura C, `&` na chamada e `(*var)` nos usos internos.
+
+**Arrays como parâmetros:** declarados com `[]` após o tipo:
+```edu
+procedimento Trocar(ref vetor: Inteiro[], i: Inteiro, j: Inteiro) inicio
     aux: Inteiro = vetor[i]
     vetor[i] = vetor[j]
     vetor[j] = aux
 fim
 ```
 
----
+### 5.9 Entrada e saída
 
-## 8. Especificação do Analisador Léxico
-
-O arquivo `src/lexer.l` é organizado em três seções, conforme o padrão Flex:
-
-### Seção 1 — Definições e Variáveis Globais
-
-```lex
-%{
-  #include <stdio.h>
-  int linha_atual = 1;    // Contador de linhas — rastreia a posição no código
-%}
-
-ESPACO      [ \t\r]+
-DIGITO      [0-9]
-LETRA       [a-zA-Z_]
-ID          {LETRA}({LETRA}|{DIGITO})*
-INTEIRO     {DIGITO}+
-REAL        {DIGITO}+"."{DIGITO}+
-TEXTO       \"([^\\\"]|\\.)*\"
+```edu
+Escrever(expressao)           // imprime com quebra de linha
+EscreverSemQuebra(expressao)  // imprime sem quebra
+Ler(variavel)                 // lê da entrada padrão
 ```
 
-**Macros de expressão regular definidas:**
+### 5.10 Estrutura de um programa
 
-| Macro | Padrão | Descrição |
-|---|---|---|
-| `ESPACO` | `[ \t\r]+` | Espaços, tabs e retorno de carro |
-| `DIGITO` | `[0-9]` | Um dígito numérico |
-| `LETRA` | `[a-zA-Z_]` | Uma letra ASCII ou `_` |
-| `ID` | `{LETRA}({LETRA}\|{DIGITO})*` | Identificador: começa com letra ou `_`, seguido de letras, dígitos ou `_` |
-| `INTEIRO` | `{DIGITO}+` | Um ou mais dígitos |
-| `REAL` | `{DIGITO}+"."{DIGITO}+` | Número com ponto decimal obrigatório |
-| `TEXTO` | `\"([^\\\"]\\.)*\"` | String entre aspas duplas com suporte a sequências de escape |
+Todo programa `.edu` termina obrigatoriamente com o procedimento `main`:
 
-### Seção 2 — Regras de Reconhecimento
+```edu
+// Declarações de tipos (opcional)
+tipo ...
+alias ...
+enum ...
 
-Cada regra associa um padrão (expressão regular) a uma ação em C. O Flex aplica a primeira regra que corresponde ao texto atual, na ordem em que estão declaradas.
+// Subprogramas (opcional)
+funcao ...
+procedimento ...
 
-### Seção 3 — Código C Auxiliar
-
-Ao final do arquivo, `yywrap` informa ao Flex que a entrada terminou:
-
-```c
-int yywrap(void) { return 1; }
+// Programa principal (obrigatório)
+procedimento main() inicio
+    // corpo
+fim
 ```
 
 ---
 
-## 9. Tokens Reconhecidos
+## 6. Análise Léxica
 
-### 9.1 Espaços e Quebras de Linha
+### 6.1 Arquivo: `src/lexer.l`
 
-| Padrão | Ação |
-|---|---|
-| Espaços, tabs (`\t`) e `\r` | Ignorados silenciosamente |
-| Quebra de linha (`\n`) | Incrementa `linha_atual` para rastreamento de posição |
+O analisador léxico é gerado pelo **Flex**. Ele rastreia linha e coluna para mensagens de erro precisas.
 
-### 9.2 Comentários
+### 6.2 Definições de padrões
 
-| Tipo | Sintaxe | Ação |
+| Macro | Expressão regular | Descrição |
 |---|---|---|
-| Linha | `// texto até fim da linha` | Ignorado |
-| Bloco | `/* texto em múltiplas linhas */` | Ignorado |
+| `ESPACO` | `[ \t\r]+` | Espaços em branco |
+| `DIGITO` | `[0-9]` | Dígito decimal |
+| `LETRA` | `[a-zA-Z_]` | Letra ou underscore |
+| `ID` | `{LETRA}({LETRA}\|{DIGITO})*` | Identificador |
+| `INTEIRO` | `{DIGITO}+` | Literal inteiro |
+| `REAL` | `{DIGITO}+"."{DIGITO}+` | Literal real |
+| `TEXTO` | `\"([^\\\"\n]\|\\.)*\"` | String com escapes |
 
-### 9.3 Palavras Reservadas
+### 6.3 Comentários
 
-| Lexema | Token | Descrição |
+```edu
+// Comentário de linha
+
+/* Comentário
+   de bloco */
+```
+
+Ambos são silenciosamente descartados; quebras de linha dentro de blocos atualizam o contador de linhas.
+
+### 6.4 Palavras reservadas
+
+| Lexema | Token | Uso |
 |---|---|---|
-| `se` | `SE` | Início de condicional |
-| `senao` | `SENAO` | Alternativa da condicional |
-| `fim_se` | `FIM_SE` | Encerramento do bloco `se` |
-| `enquanto` | `ENQUANTO` | Início do laço while |
-| `fim_enquanto` | `FIM_ENQUANTO` | Encerramento do laço while |
-| `repetir` | `REPETIR` | Início do laço do-while |
-| `ate` | `ATE` | Condição de parada do `repetir` |
-| `inicio` | `INICIO` | Abertura de bloco de código |
-| `fim` | `FIM` | Fechamento de bloco de código |
-| `procedimento` | `PROCEDIMENTO` | Declaração de procedimento (sem retorno) |
-| `funcao` | `FUNCAO` | Declaração de função (com retorno) |
-| `retorne` | `RETORNE` | Instrução de retorno de valor |
-| `ref` | `MODIFICADOR_REF` | Passagem de argumento por referência |
-| `tipo` | `TIPO` | Declaração de um registro |
-| `main` | `MAIN` | Procedimento principal |
+| `se` | `SE` | Condicional |
+| `senao` | `SENAO` | Ramo alternativo |
+| `fim_se` | `FIM_SE` | Fecha condicional |
+| `enquanto` | `ENQUANTO` | Laço com pré-teste |
+| `fim_enquanto` | `FIM_ENQUANTO` | Fecha laço |
+| `para` | `PARA` | Laço contado |
+| `fim_para` | `FIM_PARA` | Fecha laço contado |
+| `repetir` | `REPETIR` | Laço com pós-teste |
+| `ate` | `ATE` | Condição pós-teste |
+| `inicio` | `INICIO` | Abre bloco |
+| `fim` | `FIM` | Fecha bloco |
+| `procedimento` | `PROCEDIMENTO` | Define procedimento |
+| `funcao` | `FUNCAO` | Define função |
+| `retorne` | `RETORNE` | Retorna valor |
+| `ref` | `MODIFICADOR_REF` | Passagem por referência |
+| `main` | `MAIN` | Programa principal |
+| `Constante` | `CONSTANTE` | Declara constante |
+| `tipo` | `TIPO` | Declara registro |
+| `alias` | `ALIAS` | Declara alias de tipo |
+| `enum` | `ENUM` | Declara enumeração |
+| `Escrever` | `ESCREVER` | Saída com newline |
+| `EscreverSemQuebra` | `ESCREVER_SEM_QUEBRA` | Saída sem newline |
+| `Ler` | `LER` | Entrada padrão |
 
-### 9.4 Tipos Primitivos
+### 6.5 Tipos primitivos como tokens
 
-> **Atenção:** Na linguagem `.edu`, os tipos começam com letra **maiúscula**, diferenciando-os de identificadores comuns.
+Os nomes de tipos carregam seu valor de string para o parser:
 
 | Lexema | Token |
 |---|---|
@@ -264,224 +402,583 @@ int yywrap(void) { return 1; }
 | `Real` | `TIPO_REAL` |
 | `Texto` | `TIPO_TEXTO` |
 | `Booleano` | `TIPO_BOOLEANO` |
-| `Constante` | `CONSTANTE` |
 
-### 9.5 Literais
-
-| Categoria | Exemplos | Token emitido |
-|---|---|---|
-| Booleano verdadeiro | `Verdadeiro` | `LITERAL_BOOLEANO(Verdadeiro)` |
-| Booleano falso | `Falso` | `LITERAL_BOOLEANO(Falso)` |
-| Número real | `3.14`, `0.5`, `100.0` | `LITERAL_REAL(valor)` |
-| Número inteiro | `10`, `100`, `42` | `LITERAL_INTEIRO(valor)` |
-| String | `"olá mundo"` | `LITERAL_TEXTO(valor)` |
-
-> **Prioridade:** A regra de `REAL` é declarada **antes** de `INTEIRO` no lexer, garantindo que `3.14` seja reconhecido como real, e não como dois tokens inteiros separados por ponto.
-
-### 9.6 Operadores Aritméticos
+### 6.6 Operadores e delimitadores
 
 | Lexema | Token |
 |---|---|
-| `+` | `OP_SOMA` |
-| `-` | `OP_SUBTRACAO` |
-| `*` | `OP_MULTIPLICACAO` |
-| `/` | `OP_DIVISAO` |
-| `%` | `OP_MODULO` |
-
-### 9.7 Operadores Relacionais e Lógicos
-
-| Lexema | Token |
-|---|---|
-| `=` | `SINAL_IGUALDADE` |
 | `==` | `OP_IGUAL` |
 | `!=` | `OP_DIFERENTE` |
-| `>` | `OP_MAIOR` |
-| `<` | `OP_MENOR` |
 | `>=` | `OP_MAIOR_IGUAL` |
 | `<=` | `OP_MENOR_IGUAL` |
 | `&&` | `OP_LOGICO_E` |
 | `\|\|` | `OP_LOGICO_OU` |
-| `!` | `OP_LOGICO_NAO` |
+| `->` | `SETA_RETORNO` |
+| `+=` | `OP_ATRIB_SOMA` |
+| `-=` | `OP_ATRIB_SUB` |
+| `*=` | `OP_ATRIB_MUL` |
+| `/=` | `OP_ATRIB_DIV` |
+| `+` `-` `*` `/` `%` | operadores aritméticos |
+| `=` | `SINAL_IGUALDADE` |
+| `>` `<` `!` | operadores relacionais/lógico |
+| `;` `,` `:` `.` | delimitadores |
+| `(` `)` `[` `]` | agrupadores |
 
-### 9.8 Delimitadores e Pontuação
+**Ordem importa no Flex:** operadores compostos (`==`, `!=`, etc.) são declarados antes dos simples (`=`, `!`) para garantir o casamento mais longo.
 
-| Lexema | Token | Uso na linguagem |
-|---|---|---|
-| `;` | `PONTO_E_VIRGULA` | Terminador opcional de instruções |
-| `,` | `VIRGULA` | Separador de parâmetros |
-| `:` | `DOIS_PONTOS` | Separador nome:tipo na declaração |
-| `->` | `SETA_RETORNO` | Indica tipo de retorno de função |
-| `(` | `ABRE_PARENTESES` | Início de lista de parâmetros |
-| `)` | `FECHA_PARENTESES` | Fim de lista de parâmetros |
-| `[` | `ABRE_COLCHETES` | Início de índice de vetor |
-| `]` | `FECHA_COLCHETES` | Fim de índice de vetor |
+### 6.7 Tratamento de erro léxico
 
-### 9.9 Identificadores
-
-Qualquer sequência que comece com uma letra ASCII ou `_` e seja seguida de letras, dígitos ou underscores, **desde que não seja uma palavra reservada ou tipo**, é reconhecida como identificador.
-
-**Padrão:** `{LETRA}({LETRA}|{DIGITO})*`
-
-**Exemplos válidos:** `x`, `soma`, `pivo`, `inicio_vetor`, `QuickSort`, `numeros`
-
-**Token emitido:** `IDENTIFICADOR(nome)` — ex.: `IDENTIFICADOR(pivo)`
-
-> **Importante:** As palavras reservadas são declaradas **antes** dos identificadores no arquivo `lexer.l`. Como o Flex segue a ordem de declaração, `se` será reconhecido como `SE` e nunca como `IDENTIFICADOR(se)`.
-
----
-
-## 10. Tratamento de Erros Léxicos
-
-Qualquer caractere que não se enquadre em nenhuma das regras anteriores é capturado pela **regra curinga** `.` (ponto), que corresponde a qualquer caractere individual não reconhecido:
-
-```lex
+```c
 . {
+    erros_lexicos++;
     fprintf(stderr, "[ERRO L%d:C%d] Caractere invalido: '%s'\n",
             linha_atual, coluna_atual, yytext);
     coluna_atual++;
 }
 ```
 
-**Comportamento:** O lexer continua examinando o arquivo para localizar outros problemas, mas o erro léxico faz a compilação terminar com falha. Nenhum código C é publicado no caminho de saída.
+O caractere inválido é descartado e a análise continua para localizar mais erros. O contador `erros_lexicos` impede que o código C seja gerado ao final.
 
-**Exemplo prático:** Um caractere `@` fora de um texto ou comentário produz uma mensagem com linha e coluna:
-
+**Exemplo:**
 ```
 [ERRO L3:C5] Caractere invalido: '@'
 ```
 
 ---
 
-## 11 Especificação do Analisador Sintático
+## 7. Análise Sintática
 
-O arquivo `src/parser.y` converte a gramática EBNF da linguagem `.edu` em regras BNF legíveis pelo Bison (usando recursão à esquerda). A análise é feita no modelo Bottom-Up (LALR).
+### 7.1 Arquivo: `src/parser.y`
 
-As principais estruturas validadas pelo analisador incluem:
+O parser LALR(1) é gerado pelo **Bison**. Cada produção gramatical carrega ações semânticas em C que produzem fragmentos de código C armazenados em registros `record { char* code; char* opt1; }`.
 
-### 11.1 Estrutura do Programa
+### 7.2 Gramática simplificada (EBNF)
 
-Um programa válido exige uma lista opcional de subprogramas (procedimentos/funções) seguida obrigatoriamente pelo método principal:
+```ebnf
+program           = type_declarations subprograms main_program
+
+type_declarations = { type_declaration }
+type_declaration  = "tipo" ID "inicio" field_declarations "fim"
+                  | "alias" ID "=" type
+                  | "enum"  ID "inicio" enum_items "fim"
+
+subprograms       = { subprogram }
+subprogram        = sub_type ID "(" param_list_opt ")" return_type_opt block
+
+sub_type          = "procedimento" | "funcao"
+return_type_opt   = [ "->" type ]
+param_list_opt    = [ param { "," param } ]
+param             = [ "ref" ] ID ":" type [ "[]" ]
+
+main_program      = "procedimento" "main" "(" ")" block
+
+block             = "inicio" stmts "fim"
+stmts             = { stmt [ ";" ] }
+
+stmt              = decl | assign | call_stmt | if_stmt
+                  | loop_stmt | for_stmt | return_stmt | io_stmt
+
+decl              = ID ":" type [ array_decl ] [ "=" expr ]
+                  | "Constante" ID ":" type "=" expr
+
+assign            = var assign_op expr
+assign_op         = "=" | "+=" | "-=" | "*=" | "/="
+
+if_stmt           = "se" condition block_start stmts "fim_se"
+                  | "se" condition block_start stmts "senao" block_start stmts "fim_se"
+
+loop_stmt         = "enquanto" condition block_start stmts "fim_enquanto"
+                  | "repetir" stmts "ate" condition
+
+for_stmt          = "para" "(" for_assign ";" expr ";" for_assign ")" block_start stmts "fim_para"
+
+return_stmt       = "retorne" expr
+io_stmt           = "Escrever" "(" expr ")"
+                  | "EscreverSemQuebra" "(" expr ")"
+                  | "Ler" "(" var ")"
+
+expr              = logical_or
+logical_or        = logical_and { "||" logical_and }
+logical_and       = equality { "&&" equality }
+equality          = relational { ("==" | "!=") relational }
+relational        = additive { ("<" | ">" | "<=" | ">=") additive }
+additive          = multiplicative { ("+" | "-") multiplicative }
+multiplicative    = unary { ("*" | "/" | "%") unary }
+unary             = [ "!" | "-" | "+" ] primary
+primary           = var | constant | call_expr | "(" expr ")"
+
+var               = ID
+                  | ID "[" expr "]"
+                  | ID "[" expr "]" "[" expr "]"
+                  | ID "." ID
+
+call_expr         = ID "(" arg_list_opt ")"
+constant          = LITERAL_INTEIRO | LITERAL_REAL | LITERAL_TEXTO | LITERAL_BOOLEANO
 ```
-program : type_declarations subprograms main_program ;
-main_program : PROCEDIMENTO MAIN ABRE_PARENTESES FECHA_PARENTESES INICIO stmts FIM ;
-```
 
-## 11.2 Declarações e Atribuições
+### 7.3 Precedência de operadores (menor para maior)
 
-Valida declarações de variáveis (simples ou vetores) e operações de atribuição:
-``` 
-type_declaration : TIPO IDENTIFICADOR INICIO field_declarations FIM ;
-decl : IDENTIFICADOR DOIS_PONTOS type array_decl_opt assign_opt ;
-assign : var SINAL_IGUALDADE expr ;
-```
+1. `||` — OU lógico
+2. `&&` — E lógico
+3. `==` `!=` — igualdade
+4. `<` `>` `<=` `>=` — relacional
+5. `+` `-` — aditivo
+6. `*` `/` `%` — multiplicativo
+7. `!` `-` (unário) — unário
+8. Chamada de função, acesso a vetor/campo, parênteses
 
-## 11.3 Estruturas de Fluxo
+### 7.4 Tratamento de erro sintático
 
-Garante o fechamento correto dos blocos e expressões condicionais internas:
-```
-if_stmt : SE condition INICIO stmts FIM_SE
-        | SE condition INICIO stmts SENAO INICIO stmts FIM_SE ;
-loop_stmt : ENQUANTO condition INICIO stmts FIM_ENQUANTO ;
-condition : ABRE_PARENTESES expr FECHA_PARENTESES ;
-```
-
-## 11.4 Precedência Matemática
-
-As regras de expressão (`expr`, `term`, `factor`) estão estruturadas hierarquicamente para garantir que operações como multiplicação sejam processadas sintaticamente antes da soma, suportando também o agrupamento por parênteses.
-
----
-
-## 12 Tratamento de Erros Sintáticos
-
-Quando o Bison encontra um token em uma ordem que viola as regras gramaticais (ex: um `+` sem número depois, ou um bloco `se` sem `fim_se`), ele aciona automaticamente a função `yyerror`.
-
-A nossa implementação personalizada desta função imprime o erro detalhado cruzando dados com o Flex:
-```
+```c
 void yyerror(const char *s) {
-    fprintf(stderr, "[ERRO SINTATICO] Linha %d, Coluna %d: %s proximo a '%s'\n", 
+    erros_sintaticos++;
+    fprintf(stderr, "[ERRO SINTATICO] Linha %d, Coluna %d: %s proximo a '%s'\n",
             linha_atual, coluna_atual, s, yytext);
 }
 ```
 
-Erros léxicos, sintáticos ou semânticos impedem a publicação do arquivo C. Se já existir uma saída antiga no caminho solicitado, ela é removida para não ser confundida com o resultado da compilação atual.
+**Exemplo:**
+```
+[ERRO SINTATICO] Linha 4, Coluna 12: syntax error, unexpected IDENTIFICADOR proximo a 'Inteiro'
+```
 
 ---
 
-## 13. Exemplos de Saída
+## 8. Análise Semântica e Tabela de Símbolos
 
-### Entrada (`exemplo.edu`)
+### 8.1 Arquivo: `tabela/tabela_simbolos.c`
+
+A tabela de símbolos é uma **tabela hash** (`MAX_SYMBOLS = 1024`) com encadeamento para colisões. As chaves são compostas pelo formato `escopo::nome`, garantindo que símbolos homônimos em escopos diferentes não colidam.
+
+### 8.2 Estrutura de escopos
+
+Escopos são gerenciados por uma pilha (`scope_stack`, máximo 64 níveis). Ao entrar em um subprograma, empilha-se seu nome; ao sair, desempilha-se. O escopo `"global"` é empilhado na inicialização.
+
+```c
+void scope_push(const char * name, VarType ret_type);
+void scope_pop();
+ScopeEntry * scope_top();
+```
+
+A busca de símbolos percorre a pilha do topo para a base, implementando **escopo estático léxico**:
+
+```c
+Symbol * sym_lookup(const char * name);       // busca em todos os escopos
+Symbol * sym_lookup_local(const char * name); // busca apenas no escopo atual
+```
+
+### 8.3 Estrutura do símbolo
+
+```c
+typedef struct Symbol {
+    char key[256];            // "escopo::nome"
+    char name[256];           // nome do identificador
+    char scope[256];          // escopo onde foi declarado
+    VarType type;             // tipo semântico (TYPE_INT, TYPE_FLOAT, ...)
+    char declared_type[256];  // nome do tipo como declarado ("int", "float", "Pessoa"...)
+    int is_function;          // é subprograma?
+    int is_const;             // é constante?
+    int is_initialized;       // foi inicializado?
+    int is_ref;               // é parâmetro por referência?
+    int is_array;             // é vetor/matriz?
+    int dimensions;           // número de dimensões
+    int array_sizes[8];       // tamanho de cada dimensão
+    VarType return_type;      // tipo de retorno (se função)
+    char return_declared_type[256];
+    ParamInfo * params;       // lista de parâmetros (se função)
+    int param_count;
+    struct Symbol * next;     // encadeamento na hash
+} Symbol;
+```
+
+### 8.4 Tipos semânticos
+
+```c
+typedef enum {
+    TYPE_BOOL,
+    TYPE_INT,
+    TYPE_FLOAT,
+    TYPE_STRING,
+    TYPE_USER_DEFINED,
+    TYPE_VOID,
+    TYPE_UNKNOWN
+} VarType;
+```
+
+### 8.5 Tipos definidos pelo usuário
+
+Registros são armazenados em uma lista encadeada separada (`UserType`), com seus campos (`TypeField`). Aliases são armazenados em outra lista (`TypeAlias`). Consultas:
+
+```c
+UserType * user_type_lookup(const char * name);
+TypeField * user_type_field_lookup(const char * type_name, const char * field_name);
+const char * type_alias_lookup(const char * name);
+```
+
+`type_from_string()` resolve automaticamente aliases antes de retornar o `VarType`.
+
+### 8.6 Verificações semânticas realizadas
+
+| Verificação | Quando ocorre |
+|---|---|
+| Redeclaração de variável/função | `sym_insert` retorna `0` se já existe |
+| Variável não declarada | `sym_lookup` retorna `NULL` |
+| Tipo incompatível em atribuição | `declared_types_compatible()` |
+| Operandos inválidos em operador | `is_numeric_type()` / `is_boolean_type()` |
+| Alteração de constante | `sym->is_const` |
+| Retorno em procedimento (void) | `scope_top()->return_type == TYPE_VOID` |
+| Tipo de retorno incompatível | `declared_types_compatible()` |
+| Campo inexistente em registro | `user_type_field_lookup()` retorna `NULL` |
+| Acesso a campo em não-registro | `sym->type != TYPE_USER_DEFINED` |
+| Índice de vetor não inteiro | `type_from_string(expr.opt1) != TYPE_INT` |
+| Índice literal fora dos limites | comparação com `array_sizes[dim]` |
+| Acesso como vetor em não-vetor | `sym->is_array == 0` |
+| Argumento `ref` não enderecável | `sym_is_addressable_expression()` |
+| Número errado de argumentos | contagem em `transform_call_args()` |
+| Tipo errado de argumento | `declared_types_compatible()` por posição |
+| Tipo recursivo em registro | nome do campo igual ao do tipo pai |
+| Condição não booleana | `is_boolean_type()` em `se` e `enquanto` |
+
+### 8.7 Compatibilidade de tipos
+
+```c
+int types_compatible(VarType t1, VarType t2);
+int declared_types_compatible(const char * type1, const char * type2);
+```
+
+Regras:
+- Tipos idênticos são sempre compatíveis.
+- `Inteiro` e `Real` são compatíveis entre si (coerção numérica).
+- Dois tipos `TYPE_USER_DEFINED` diferentes nunca são compatíveis.
+- Aliases são resolvidos antes da comparação.
+
+### 8.8 Erros semânticos
+
+```c
+void semantic_error(const char *format, ...) {
+    erros_semanticos++;
+    fprintf(stderr, "[ERRO SEMANTICO] ");
+    ...
+}
+```
+
+**Exemplos:**
+```
+[ERRO SEMANTICO] Linha 3: tipos incompativeis em 'numero'
+[ERRO SEMANTICO] Linha 7: argumento 1 de 'Incrementar' deve ser variavel para ref
+[ERRO SEMANTICO] Linha 5: campo 'idade' nao existe em 'Pessoa'
+[ERRO SEMANTICO] Linha 2: constante 'LIMITE' nao pode ser alterada
+```
+
+---
+
+## 9. Geração de Código C
+
+### 9.1 Estratégia
+
+A geração é **dirigida pela sintaxe**: cada produção da gramática Bison produz diretamente um fragmento de código C, armazenado no campo `code` do registro associado ao não-terminal. A concatenação dos fragmentos forma o código final.
+
+### 9.2 Cabeçalho gerado automaticamente
+
+Todo arquivo C gerado começa com:
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+static char *edu_concat(const char *a, const char *b) {
+    size_t la = strlen(a), lb = strlen(b);
+    char *out = malloc(la + lb + 1);
+    if (!out) exit(1);
+    memcpy(out, a, la);
+    memcpy(out + la, b, lb + 1);
+    return out;
+}
+```
+
+`edu_concat` implementa a concatenação de `Texto + Texto`.
+
+### 9.3 Estruturas de controle — tradução para labels e goto
+
+O código gerado **não usa** `if`, `while` ou `for` do C. Todas as estruturas de controle são traduzidas para `goto` e labels, conforme exigido:
+
+**`se/fim_se`:**
+```c
+if(!(condicao)) goto L1;
+// corpo
+L1:;
+```
+
+**`se/senao/fim_se`:**
+```c
+if(condicao) goto L1;
+goto L2;
+L1:;
+// ramo verdadeiro
+goto L3;
+L2:;
+// ramo falso
+L3:;
+```
+
+**`enquanto/fim_enquanto`:**
+```c
+L1:;
+if(!(condicao)) goto L2;
+// corpo
+goto L1;
+L2:;
+```
+
+**`repetir/ate`:**
+```c
+L1:;
+// corpo
+if(!(condicao)) goto L1;
+```
+
+**`para`:**
+```c
+// init
+L1:;
+if(!(condicao)) goto L2;
+// corpo
+// incremento
+goto L1;
+L2:;
+```
+
+### 9.4 Passagem por referência
+
+| Contexto | `.edu` | C gerado |
+|---|---|---|
+| Assinatura | `ref x: Inteiro` | `int *x` |
+| Uso interno | `x = x + 1` | `(*x) = (*x) + 1` |
+| Chamada | `f(var)` | `f(&var)` |
+| Array como parâmetro | `ref v: Inteiro[]` | `int *v` (decay de array) |
+
+### 9.5 Entrada e saída
 
 ```edu
-procedimento main() inicio
-    numero: Inteiro = 42
+Escrever(expr)           → printf("%d\n", (int)(expr));
+                         → printf("%f\n", (float)(expr));
+                         → printf("%s\n", expr);
+EscreverSemQuebra(expr)  → printf("%d", (int)(expr));
+Ler(var)                 → scanf("%d", &var);
+```
 
-    se (numero > 0) inicio
-        Escrever(numero)
-    senao inicio
-        Escrever("zero ou negativo")
-    fim_se
+O formato (`%d`, `%f`, `%s`) é escolhido em tempo de compilação com base no tipo inferido da expressão.
+
+### 9.6 Registros e tipos definidos pelo usuário
+
+```edu
+tipo Pessoa inicio
+    nome: Texto
+    idade: Inteiro
 fim
 ```
 
-### Compilação
-
-```bash
-./compiler exemplo.edu exemplo.c
-gcc exemplo.c -o exemplo
-./exemplo
+Gera:
+```c
+typedef struct {
+    char* nome;
+    int idade;
+} Pessoa;
 ```
 
-### Saída esperada
-
-```text
-[SUCESSO] Codigo C gerado em: exemplo.c
-42
+**Alias:**
+```edu
+alias Numero = Inteiro
 ```
+Gera:
+```c
+typedef int Numero;
+```
+
+**Enum:**
+```edu
+enum Cor inicio VERMELHO, VERDE, AZUL fim
+```
+Gera:
+```c
+typedef enum {
+    VERMELHO,
+    VERDE,
+    AZUL
+} Cor;
+```
+
+### 9.7 Módulo de labels: `lib/labels.c`
+
+```c
+int new_label();        // retorna próximo inteiro (L1, L2, ...)
+char * label_str(int n); // retorna "L42" para n=42
+```
+
+Labels são gerados na ordem de visita das produções, garantindo unicidade global no programa.
+
+### 9.8 Módulo record: `lib/record.c`
+
+```c
+typedef struct record {
+    char * code;   // fragmento de código C
+    char * opt1;   // tipo inferido ou metadado auxiliar
+} record;
+
+record * createRecord(char * code, char * opt1);
+void freeRecord(record * r);
+```
+
+Cada não-terminal que produz código carrega um `record *`. O campo `opt1` armazena o tipo declarado da expressão (ex: `"int"`, `"float"`, `"char*"`, `"Pessoa"`), usado nas verificações semânticas.
 
 ---
 
-## 14. Arquivos de Teste
+## 10. Testes
 
-- `testes/quicksort.edu`: Implementação completa e válida do algoritmo QuickSort. Exercita recursividade, laços, condicionais e manipulação de vetores.
+### 10.1 Testes positivos
 
-- `testes/quicksortERRO.edu`: Variante do código acima contendo erros sintáticos deliberados, usado para testar a captura de exceções do Bison.
+Executados por `make test` (alvo `test-positivos`):
 
-- `testes/testes.edu`: Avaliação geral dos tipos, operações, laços e entrada/saída.
+| Arquivo | O que testa |
+|---|---|
+| `testes/testes.edu` | Cobertura geral: todos os tipos, operadores, laços, funções |
+| `testes/registro.edu` | Registros definidos pelo usuário, acesso a campos |
+| `testes/quicksort.edu` | Recursão, arrays `ref`, QuickSort completo |
+| `testes/recursos_secundarios.edu` | `alias`, `enum`, `para`, matrizes |
+| `testes/ref_escalar.edu` | Passagem de escalar por referência |
 
-- `testes/erro_lexico.edu`: Contém um caractere inválido e verifica o bloqueio da saída C.
+### 10.2 Testes negativos
 
-- `testes/erro_semantico.edu`: Contém uma atribuição incompatível e verifica o bloqueio da saída C.
+Executados por `make test` (alvo `test-negativos`). Cada arquivo **deve** fazer o compilador retornar código `1`:
 
-- `testes/registro.edu`: Declara e utiliza um registro definido pelo usuário.
+| Arquivo | Erro esperado |
+|---|---|
+| `testes/erro_lexico.edu` | Caractere inválido `@` |
+| `testes/erro_semantico.edu` | `numero = "texto"` (Inteiro ← Texto) |
+| `testes/registroERRO.edu` | Acesso a campo `idade` não declarado em `Pessoa` |
+| `testes/quicksortERRO.edu` | Múltiplos erros sintáticos |
+| `testes/assinatura_ref_erro.edu` | `Incrementar(x + 1)` — expressão não enderecável para `ref` |
+| `testes/chamada_assinatura_erro.edu` | `soma(1, "dois")` — tipo errado no argumento 2 |
+| `testes/constante_erro.edu` | `LIMITE = 11` — alteração de constante |
+| `testes/vetor_indice_erro.edu` | `numeros[2]` com vetor de tamanho `[2]` |
 
-- `testes/registroERRO.edu`: Tenta acessar um campo inexistente para validar o erro semântico.
+### 10.3 Teste integrador QuickSort
+
+```bash
+make test-quicksort
+```
+
+Compila `problemas/problema05.edu`, executa e verifica que a saída é `1 2 3 4 7 8 9 12 `.
+
+### 10.4 Execução dos problemas
+
+```bash
+make rodar
+```
+
+Executa cada binário com entradas pré-definidas via pipe, produzindo saída visível no terminal.
 
 ---
 
-## 15. Atualizacao da Entrega Final
+## 11. Exemplos Completos
 
-### Comandos principais
+### 11.1 Olá, Mundo
 
-```bash
-make
-make problemas
-make test
+```edu
+procedimento main() inicio
+    Escrever("Ola, Mundo!")
+fim
 ```
 
-O alvo `make problemas` compila os seis programas oficiais. O alvo `make test` recompila o compilador, valida casos positivos, confirma que casos negativos falham e executa uma checagem pratica do QuickSort do problema 5.
+### 11.2 Fatorial recursivo
 
-### Recursos semanticos adicionais
+```edu
+funcao fatorial(n: Inteiro) -> Inteiro inicio
+    se (n <= 1) inicio
+        retorne 1
+    fim_se
+    retorne n * fatorial(n - 1)
+fim
 
-- Assinaturas de subprogramas com quantidade, ordem e tipos dos argumentos.
-- Parametros `ref` com ponteiros em C, endereco na chamada e desreferencia no corpo.
-- Constantes imutaveis e obrigatoriamente inicializadas.
-- Verificacao de operadores, atribuicoes, condicoes, retornos, indices e chamadas.
-- Divisao inteira preservada quando os dois operandos sao `Inteiro`.
-- Concatenacao textual com `+` entre dois valores `Texto`.
-- Vetores e matrizes multidimensionais com validacao estatica de indices literais.
-- `para`, `alias` e `enum`.
+procedimento main() inicio
+    Escrever(fatorial(10))
+fim
+```
 
-### Sintaxe dos recursos secundarios
+### 11.3 QuickSort com passagem por referência
+
+```edu
+procedimento Trocar(ref vetor: Inteiro[], i: Inteiro, j: Inteiro) inicio
+    aux: Inteiro = vetor[i]
+    vetor[i] = vetor[j]
+    vetor[j] = aux
+fim
+
+funcao Particionar(ref vetor: Inteiro[], ini: Inteiro, fim_v: Inteiro) -> Inteiro inicio
+    pivo: Inteiro = vetor[fim_v]
+    i: Inteiro = ini - 1
+    j: Inteiro = ini
+    enquanto (j < fim_v) inicio
+        se (vetor[j] <= pivo) inicio
+            i = i + 1
+            Trocar(vetor, i, j)
+        fim_se
+        j = j + 1
+    fim_enquanto
+    Trocar(vetor, i + 1, fim_v)
+    retorne i + 1
+fim
+
+procedimento QuickSort(ref vetor: Inteiro[], ini: Inteiro, fim_v: Inteiro) inicio
+    se (ini < fim_v) inicio
+        pivo: Inteiro = Particionar(vetor, ini, fim_v)
+        QuickSort(vetor, ini, pivo - 1)
+        QuickSort(vetor, pivo + 1, fim_v)
+    fim_se
+fim
+
+procedimento main() inicio
+    numeros: Inteiro[5]
+    numeros[0] = 3
+    numeros[1] = 1
+    numeros[2] = 4
+    numeros[3] = 1
+    numeros[4] = 5
+    QuickSort(numeros, 0, 4)
+    cont: Inteiro = 0
+    enquanto (cont < 5) inicio
+        EscreverSemQuebra(numeros[cont])
+        EscreverSemQuebra(" ")
+        cont = cont + 1
+    fim_enquanto
+    Escrever("")
+fim
+```
+
+### 11.4 Registro com função construtora
+
+```edu
+tipo Pessoa inicio
+    nome: Texto
+    idade: Inteiro
+fim
+
+funcao criar(nome: Texto, idade: Inteiro) -> Pessoa inicio
+    p: Pessoa
+    p.nome = nome
+    p.idade = idade
+    retorne p
+fim
+
+procedimento main() inicio
+    aluno: Pessoa = criar("Ana", 20)
+    Escrever(aluno.nome)
+    Escrever(aluno.idade)
+fim
+```
+
+### 11.5 alias, enum e para
 
 ```edu
 alias Numero = Inteiro
@@ -492,26 +989,46 @@ enum Cor inicio
     AZUL
 fim
 
-para (i = 0; i < 10; i = i + 1) inicio
-    Escrever(i)
-fim_para
+procedimento main() inicio
+    soma: Numero = 0
+    i: Inteiro = 0
+    para (i = 0; i < 5; i = i + 1) inicio
+        soma = soma + i
+    fim_para
+    Escrever(soma)
+fim
 ```
-
-### Novos testes
-
-- `testes/assinatura_ref_erro.edu`
-- `testes/chamada_assinatura_erro.edu`
-- `testes/constante_erro.edu`
-- `testes/vetor_indice_erro.edu`
-- `testes/recursos_secundarios.edu`
 
 ---
 
-## 16. Referências
+## 12. Limitações Conhecidas
 
+As limitações abaixo refletem o escopo atual da implementação e são candidatas a trabalho futuro:
+
+**Escopo de blocos:** A pilha de escopos é alterada apenas ao entrar/sair de subprogramas. Blocos de `se`, `senao` e laços não criam escopos próprios. Variáveis declaradas nesses blocos ficam no escopo da função.
+
+**Tipo `Nulo`:** Especificado nas diretrizes do projeto, mas ainda não implementado como token, tipo semântico ou valor padrão de inicialização.
+
+**Inicialização implícita:** Variáveis declaradas sem valor inicial tornam-se variáveis C não inicializadas, podendo conter valor indeterminado em tempo de execução.
+
+**Matrizes em parâmetros:** Apenas matrizes unidimensionais (`[]`) são suportadas como parâmetro. Matrizes bidimensionais precisam ser linearizadas manualmente pelo programador.
+
+**Conflitos Bison:** Há quatro conflitos shift/reduce relacionados ao terminador opcional `;`. Resolvidos por padrão pelo Bison (shift), sem impacto funcional nos programas testados.
+
+**Verificação de retorno:** Não é verificado se funções retornam um valor em todos os caminhos de execução.
+
+**Divisão por zero e overflow:** Não há verificação em tempo de execução. O programa será encerrado pelo sistema operacional com comportamento indefinido (herdado do C).
+
+---
+
+## 13. Referências
+
+- AHO, Alfred V.; LAM, Monica S.; SETHI, Ravi; ULLMAN, Jeffrey D. **Compiladores: Princípios, Técnicas e Ferramentas**. 2ª ed. Pearson, 2008. *(Livro do Dragão)*
+- SEBESTA, Robert W. **Conceitos de Linguagens de Programação**. 11ª ed. Bookman, 2018.
 - [Manual do Bison — GNU Project](https://www.gnu.org/software/bison/manual/)
 - [Manual do Flex — GNU Project](https://www.gnu.org/software/flex/manual/)
-- [Compiladores: Princípios, Técnicas e Ferramentas — Aho, Lam, Sethi, Ullman](https://en.wikipedia.org/wiki/Compilers:_Principles,_Techniques,_and_Tools) *(Livro do Dragão)*
 - Disciplina DIM0548 — Engenharia de Linguagens, UFRN
 
 ---
+
+*Documentação gerada com base no estado do repositório em junho de 2026.*
