@@ -47,7 +47,6 @@ procedimento main() inicio
                     atual = esq[atual]
                 senao inicio
                     atual = dir[atual]
-                fim
                 fim_se
             fim_enquanto
 
@@ -56,9 +55,7 @@ procedimento main() inicio
                 esq[pai] = novo
             senao inicio
                 dir[pai] = novo
-            fim
             fim_se
-        fim
         fim_se
 
         tamanho = tamanho + 1
@@ -121,6 +118,5 @@ procedimento main() inicio
             fim_se
         fim_enquanto
         Escrever("")
-    fim
     fim_se
 fim

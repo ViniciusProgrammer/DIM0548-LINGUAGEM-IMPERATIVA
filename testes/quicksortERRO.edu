@@ -46,5 +46,5 @@ procedimento main() inicio
     cont: Inteiro = 1
 
     Escrever("Quantos numeros deseja ordenar (limite de 100)?")
-    tamanho = LerInteiro()
+    Ler(tamanho)
 fim

@@ -46,7 +46,7 @@ static char * c_includes =
 %token OP_LOGICO_NAO OP_IGUAL OP_DIFERENTE OP_MAIOR_IGUAL OP_MENOR_IGUAL
 %token SETA_RETORNO OP_ATRIB_SOMA OP_ATRIB_SUB OP_ATRIB_MUL OP_ATRIB_DIV
 %token PONTO_E_VIRGULA VIRGULA DOIS_PONTOS
-%token ABRE_PARENTESES FECHA_PARENTESES ABRE_COLCHETES FECHA_COLCHETES ABRE_CHAVES FECHA_CHAVES PONTO
+%token ABRE_PARENTESES FECHA_PARENTESES ABRE_COLCHETES FECHA_COLCHETES PONTO
 
 /* ── Tokens com valor de string ── */
 %token <sValue> IDENTIFICADOR
@@ -185,7 +185,6 @@ main_program
 
 block
     : INICIO stmts FIM                      { $$ = $2; }
-    | ABRE_CHAVES stmts FECHA_CHAVES        { $$ = $2; }
     ;
 
 stmts
@@ -289,13 +288,7 @@ assign_op
     ;
 
 call_stmt
-    : call_expr PONTO_E_VIRGULA
-      {
-          char * s = cat($1->code, ";\n", "", "", "");
-          freeRecord($1);
-          $$ = createRecord(s, ""); free(s);
-      }
-    | call_expr
+    : call_expr
       {
           char * s = cat($1->code, ";\n", "", "", "");
           freeRecord($1);
@@ -345,7 +338,7 @@ if_stmt
           freeRecord($2); freeRecord($4);
           $$ = createRecord(s, ""); free(s);
       }
-    | SE condition block_start stmts SENAO block FIM_SE
+    | SE condition block_start stmts SENAO block_start stmts FIM_SE
       {
           int lt = new_label();
           int lf = new_label();
@@ -358,21 +351,20 @@ if_stmt
           char * t2 = cat(t1, "goto ", lfs, ";\n", "");
           char * t3 = cat(t2, lts, ":;\n", $4->code, "");
           char * t4 = cat(t3, "goto ", les, ";\n", "");
-          char * t5 = cat(t4, lfs, ":;\n", $6->code, "");
+          char * t5 = cat(t4, lfs, ":;\n", $7->code, "");
           char * s  = cat(t5, les, ":;\n", "", "");
           free(t1); free(t2); free(t3); free(t4); free(t5);
-          freeRecord($2); freeRecord($4); freeRecord($6);
+          freeRecord($2); freeRecord($4); freeRecord($7);
           $$ = createRecord(s, ""); free(s);
       }
     ;
 
 condition
-    : expr  { $$ = $1; }
+    : ABRE_PARENTESES expr FECHA_PARENTESES  { $$ = $2; }
     ;
 
 block_start
     : INICIO
-    | ABRE_CHAVES
     ;
 
 loop_stmt
@@ -407,7 +399,6 @@ loop_stmt
 
 loop_end
     : FIM_ENQUANTO
-    | FECHA_CHAVES
     ;
 
 return_stmt
@@ -426,7 +417,7 @@ return_stmt
     ;
 
 io_stmt
-    : ESCREVER ABRE_PARENTESES expr FECHA_PARENTESES PONTO_E_VIRGULA
+    : ESCREVER ABRE_PARENTESES expr FECHA_PARENTESES
       {
           char * s;
           VarType et = type_from_string($3->opt1);
@@ -449,59 +440,12 @@ io_stmt
               s = cat("printf(\"%s\\n\", ", $3->code, ");\n", "", "");
           else
               s = cat("printf(\"%d\\n\", (int)(", $3->code, "));\n", "", "");
-          freeRecord($3);
-          $$ = createRecord(s, ""); free(s);
-      }
-    | ESCREVER ABRE_PARENTESES expr FECHA_PARENTESES
-      {
-          char * s;
-          VarType et = type_from_string($3->opt1);
-          if (et == TYPE_UNKNOWN) {
-              char * base = get_base_name($3->code);
-              Symbol * sym = sym_lookup(base);
-              free(base);
-              if (!sym) {
-                  base = get_base_name($3->opt1);
-                  sym = sym_lookup(base);
-                  free(base);
-              }
-              if (sym) et = sym->type;
-          }
-          if ($3->code[0] == '"')
-              s = cat("printf(\"%s\\n\", ", $3->code, ");\n", "", "");
-          else if (et == TYPE_FLOAT)
-              s = cat("printf(\"%f\\n\", (float)(", $3->code, "));\n", "", "");
-          else if (et == TYPE_STRING)
-              s = cat("printf(\"%s\\n\", ", $3->code, ");\n", "", "");
-          else
-              s = cat("printf(\"%d\\n\", (int)(", $3->code, "));\n", "", "");
-          freeRecord($3);
-          $$ = createRecord(s, ""); free(s);
-      }
-    | ESCREVER_SEM_QUEBRA ABRE_PARENTESES expr FECHA_PARENTESES PONTO_E_VIRGULA
-      {
-          char * s = generate_write_code($3, 0);
           freeRecord($3);
           $$ = createRecord(s, ""); free(s);
       }
     | ESCREVER_SEM_QUEBRA ABRE_PARENTESES expr FECHA_PARENTESES
       {
           char * s = generate_write_code($3, 0);
-          freeRecord($3);
-          $$ = createRecord(s, ""); free(s);
-      }
-    | LER ABRE_PARENTESES var FECHA_PARENTESES PONTO_E_VIRGULA
-      {
-          char * base = get_base_name($3->code);
-          Symbol * sym = sym_lookup(base);
-          free(base);
-          char fmt[8] = "%d";
-          if (sym) {
-              if (sym->type == TYPE_FLOAT)  strcpy(fmt, "%f");
-              if (sym->type == TYPE_STRING) strcpy(fmt, "%s");
-          }
-          char fmtlit[16]; sprintf(fmtlit, "\"%s\"", fmt);
-          char * s = cat("scanf(", fmtlit, ", &", $3->code, ");\n");
           freeRecord($3);
           $$ = createRecord(s, ""); free(s);
       }

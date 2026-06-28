@@ -15,36 +15,34 @@ Na pasta raiz do projeto, dê permissão ao script e execute-o:
 chmod +x compilar.sh
 ./compilar.sh
 ```
-O script automatiza a geração do analisador sintático pelo Bison, do analisador léxico pelo Flex e realiza a compilação final gerando o executável ./analisador_sintatico.
+O script automatiza a geração do analisador sintático pelo Bison, do analisador léxico pelo Flex e realiza a compilação final gerando o executável `./compiler`.
 
-O script usa `-lfl` para linkar a biblioteca do Flex e `-Wall` para ativar avisos de compilação.
+Também é possível executar `make` para gerar o compilador.
 
 ## 💻 Como Testar
 ```bash
 # Testar com o algoritmo QuickSort (Sintaxe Válida)
-./analisador_sintatico < testes/quicksort.edu
+./compiler testes/quicksort.edu /tmp/quicksort.c
+gcc /tmp/quicksort.c -o /tmp/quicksort
 
-# Testar com arquivo contendo erros para verificar a captura (Sintaxe Inválida)
-./analisador_sintatico < testes/quicksortERRO.edu
+# Testar arquivo com erros sintáticos
+./compiler testes/quicksortERRO.edu /tmp/quicksortERRO.c
 
-# Testar validação de laços, condicionais e tipos gerais
-./analisador_sintatico < testes/testes.edu
+# Testar estruturas gerais
+./compiler testes/testes.edu /tmp/testes.c
+gcc /tmp/testes.c -o /tmp/testes
 ```
 
 ## ✅ Código de Saída
-O executável processa o arquivo e imprime o resultado da análise diretamente no terminal (retornando o código de status `0` para sucesso e `1` para falha).
+O executável recebe os caminhos de entrada e saída, gera código C e retorna código `0` para sucesso sintático ou `1` para falha.
 
 Exemplo de saída com sucesso (Sintaxe Correta):
 ```bash
-Iniciando analise sintatica...
-
-[SUCESSO] Analise sintatica concluida!
+[SUCESSO] Codigo C gerado em: /tmp/testes.c
 ```
 
 Exemplo de saída com falha (Erro Sintático):
 ```bash
-Iniciando analise sintatica...
 [ERRO SINTATICO] Linha 4, Coluna 9: syntax error proximo a 'Inteiro'
-
-[FALHA] Foram encontrados erros sintaticos no codigo.
+[FALHA] Erros encontrados.
 ```

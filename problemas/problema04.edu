@@ -103,7 +103,6 @@ procedimento main() inicio
         Escrever("Verdadeiro")
     senao inicio
         Escrever("Falso")
-    fim
     fim_se
     Escrever("")
 

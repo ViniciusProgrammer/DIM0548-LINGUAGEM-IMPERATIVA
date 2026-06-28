@@ -30,12 +30,12 @@ $(PARSER_OUT): $(PARSER_SRC)
 # ── Compilar todos os problemas ──────────────────────────────────
 problemas: compiler p1 p2 p3 p4 p5 p6
 
-p1: problemas/problema01.edu
+p1: compiler problemas/problema01.edu | saidas/
 	@echo "\n=== Compilando Problema 1 ==="
 	$(COMPILER) problemas/problema01.edu saidas/p1.c
 	$(CC) saidas/p1.c -o saidas/p1
 
-p2: problemas/problema02.edu
+p2: compiler problemas/problema02.edu | saidas/
 	@echo "\n=== Compilando Problema 2 ==="
 	$(COMPILER) problemas/problema02.edu saidas/p2.c
 	$(CC) saidas/p2.c -o saidas/p2
@@ -45,14 +45,14 @@ p3: compiler problemas/problema03.edu | saidas/
 	$(COMPILER) problemas/problema03.edu saidas/p3.c
 	$(CC) saidas/p3.c -o saidas/p3
 
-p4: problemas/problema4.edu
+p4: compiler problemas/problema04.edu | saidas/
 	@echo "\n=== Compilando Problema 4 ==="
-	$(COMPILER) problemas/problema4.edu saidas/p4.c
+	$(COMPILER) problemas/problema04.edu saidas/p4.c
 	$(CC) saidas/p4.c -o saidas/p4
 
-p5: problemas/problema5.edu
+p5: compiler problemas/problema05.edu | saidas/
 	@echo "\n=== Compilando Problema 5 ==="
-	$(COMPILER) problemas/problema5.edu saidas/p5.c
+	$(COMPILER) problemas/problema05.edu saidas/p5.c
 	$(CC) saidas/p5.c -o saidas/p5
 
 p6: compiler problemas/problema06.edu | saidas/

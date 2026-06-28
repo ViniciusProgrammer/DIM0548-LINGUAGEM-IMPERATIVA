@@ -2,7 +2,7 @@
 
 **Repositório:** [ViniciusProgrammer/DIM0548-LINGUAGEM-IMPERATIVA](https://github.com/ViniciusProgrammer/DIM0548-LINGUAGEM-IMPERATIVA)
 **Disciplina:** DIM0548 — Engenharia de Linguagens
-**Tecnologias:** Flex · GCC · Shell Script (Bash)
+**Tecnologias:** Flex · Bison · GCC · Shell Script (Bash)
 
 ---
 
@@ -28,10 +28,12 @@
 
 ## 1. Visão Geral
 
-Este projeto implementa as duas primeiras fases de um compilador (o **Analisador Léxico** e o **Analisador Sintático**) para uma linguagem imperativa educacional chamada `.edu`. O projeto foi desenvolvido como trabalho prático da disciplina **DIM0548 — Engenharia de Linguagens**.
+Este projeto implementa um compilador para uma linguagem imperativa educacional chamada `.edu`. O projeto foi desenvolvido como trabalho prático da disciplina **DIM0548 — Engenharia de Linguagens**.
 
 - **Fase 1 (Léxica):** Lê o código-fonte e agrupa os caracteres em unidades lógicas chamadas **tokens** (palavras reservadas, identificadores, operadores).
 - **Fase 2 (Sintática):** Recebe esses tokens e verifica se eles formam frases válidas de acordo com a **gramática** da linguagem, garantindo a ordem estrutural (ex: um `se` deve ter um `fim_se`).
+- **Fase 3 (Semântica):** Registra identificadores e realiza verificações de tipos e escopos.
+- **Fase 4 (Geração):** Traduz o programa `.edu` para o subconjunto de C definido no problema 8.
 
 ---
 
@@ -114,32 +116,31 @@ chmod +x compilar.sh
 O que o script faz:
 1. Roda o `bison -d` para gerar o parser e a lista de tokens (`y.tab.h`).
 2. Roda o `flex` para gerar o scanner.
-3. Usa o `gcc` para juntar ambos no executável `analisador_sintatico`.
+3. Usa o `gcc` para juntar o lexer, o parser e os módulos auxiliares no executável `compiler`.
 
 ---
 
 ## 6. Como Testar
 
-O analisador lê o código-fonte pela **entrada padrão** (`stdin`). Use a redireção `<` para passar um arquivo:
+O compilador recebe o arquivo de entrada e o caminho do arquivo C de saída como argumentos:
 
 ```bash
-# Testar código válido (Deve exibir SUCESSO)
-./analisador_sintatico < testes/quicksort.edu
+# Código válido
+./compiler testes/quicksort.edu /tmp/quicksort.c
+gcc /tmp/quicksort.c -o /tmp/quicksort
 
-# Testar código inválido (Deve acusar ERRO SINTÁTICO)
-./analisador_sintatico < testes/quicksortERRO.edu
+# Código propositalmente inválido
+./compiler testes/quicksortERRO.edu /tmp/quicksortERRO.c
 
-# Testar com o arquivo de testes gerais
-./analisador_lexico < testes/testes.edu
-
-# Testar com qualquer outro arquivo .edu
-./analisador_lexico < caminho/para/programa.edu
+# Estruturas gerais
+./compiler testes/testes.edu /tmp/testes.c
+gcc /tmp/testes.c -o /tmp/testes
 ```
 
-Também é possível testar em modo interativo — o lexer lê do teclado e exibe os tokens em tempo real (finalize com `Ctrl+D`):
+Para compilar os seis problemas de avaliação:
 
 ```bash
-./analisador_lexico
+make problemas
 ```
 
 ---
@@ -152,7 +153,7 @@ A linguagem `.edu` é uma linguagem imperativa educacional com sintaxe em portug
 - Estruturas de controle (`se/senao/fim_se`, `enquanto/fim_enquanto`, `repetir/ate`)
 - Definição de `procedimento` e `funcao` com parâmetros por referência (`ref`)
 - Tipo de retorno de funções declarado com o operador `->`
-- Vetores (arrays) com sintaxe `Tipo[tamanho]` e acesso por `vetor[i]`
+- Vetores (arrays) com sintaxe `nome: Tipo[tamanho]` e acesso por `vetor[i]`
 - Literais booleanos (`Verdadeiro` / `Falso`)
 - Comentários de linha (`//`) e de bloco (`/* */`)
 
@@ -183,8 +184,8 @@ O arquivo `src/lexer.l` é organizado em três seções, conforme o padrão Flex
 
 ESPACO      [ \t\r]+
 DIGITO      [0-9]
-LETRA       [a-zA-Z]
-ID          {LETRA}({LETRA}|{DIGITO}|_)*
+LETRA       [a-zA-Z_]
+ID          {LETRA}({LETRA}|{DIGITO})*
 INTEIRO     {DIGITO}+
 REAL        {DIGITO}+"."{DIGITO}+
 TEXTO       \"([^\\\"]|\\.)*\"
@@ -196,8 +197,8 @@ TEXTO       \"([^\\\"]|\\.)*\"
 |---|---|---|
 | `ESPACO` | `[ \t\r]+` | Espaços, tabs e retorno de carro |
 | `DIGITO` | `[0-9]` | Um dígito numérico |
-| `LETRA` | `[a-zA-Z]` | Uma letra maiúscula ou minúscula |
-| `ID` | `{LETRA}({LETRA}\|{DIGITO}\|_)*` | Identificador: começa com letra, seguido de letras, dígitos ou `_` |
+| `LETRA` | `[a-zA-Z_]` | Uma letra ASCII ou `_` |
+| `ID` | `{LETRA}({LETRA}\|{DIGITO})*` | Identificador: começa com letra ou `_`, seguido de letras, dígitos ou `_` |
 | `INTEIRO` | `{DIGITO}+` | Um ou mais dígitos |
 | `REAL` | `{DIGITO}+"."{DIGITO}+` | Número com ponto decimal obrigatório |
 | `TEXTO` | `\"([^\\\"]\\.)*\"` | String entre aspas duplas com suporte a sequências de escape |
@@ -208,15 +209,10 @@ Cada regra associa um padrão (expressão regular) a uma ação em C. O Flex apl
 
 ### Seção 3 — Código C Auxiliar
 
-```c
-#ifndef yywrap
-int yywrap(void) { return 1; }  // Sinaliza fim da entrada para o Flex
-#endif
+Ao final do arquivo, `yywrap` informa ao Flex que a entrada terminou:
 
-int main(void) {
-    yylex();   // Inicia a análise léxica
-    return 0;
-}
+```c
+int yywrap(void) { return 1; }
 ```
 
 ---
@@ -232,10 +228,10 @@ int main(void) {
 
 ### 9.2 Comentários
 
-| Tipo | Sintaxe | Token emitido |
+| Tipo | Sintaxe | Ação |
 |---|---|---|
-| Linha | `// texto até fim da linha` | `COMENTARIO_LINHA_IGNORADO` |
-| Bloco | `/* texto em múltiplas linhas */` | `COMENTARIO_BLOCO_IGNORADO` |
+| Linha | `// texto até fim da linha` | Ignorado |
+| Bloco | `/* texto em múltiplas linhas */` | Ignorado |
 
 ### 9.3 Palavras Reservadas
 
@@ -254,7 +250,7 @@ int main(void) {
 | `funcao` | `FUNCAO` | Declaração de função (com retorno) |
 | `retorne` | `RETORNE` | Instrução de retorno de valor |
 | `ref` | `MODIFICADOR_REF` | Passagem de argumento por referência |
-| `main` | Procedimento principal |
+| `main` | `MAIN` | Procedimento principal |
 
 ### 9.4 Tipos Primitivos
 
@@ -266,7 +262,7 @@ int main(void) {
 | `Real` | `TIPO_REAL` |
 | `Texto` | `TIPO_TEXTO` |
 | `Booleano` | `TIPO_BOOLEANO` |
-| `constante` | `CONSTANTE` |
+| `Constante` | `CONSTANTE` |
 
 ### 9.5 Literais
 
@@ -288,6 +284,7 @@ int main(void) {
 | `-` | `OP_SUBTRACAO` |
 | `*` | `OP_MULTIPLICACAO` |
 | `/` | `OP_DIVISAO` |
+| `%` | `OP_MODULO` |
 
 ### 9.7 Operadores Relacionais e Lógicos
 
@@ -308,7 +305,7 @@ int main(void) {
 
 | Lexema | Token | Uso na linguagem |
 |---|---|---|
-| `;` | `PONTO_E_VIRGULA` | Separador de instruções |
+| `;` | `PONTO_E_VIRGULA` | Terminador opcional de instruções |
 | `,` | `VIRGULA` | Separador de parâmetros |
 | `:` | `DOIS_PONTOS` | Separador nome:tipo na declaração |
 | `->` | `SETA_RETORNO` | Indica tipo de retorno de função |
@@ -316,14 +313,12 @@ int main(void) {
 | `)` | `FECHA_PARENTESES` | Fim de lista de parâmetros |
 | `[` | `ABRE_COLCHETES` | Início de índice de vetor |
 | `]` | `FECHA_COLCHETES` | Fim de índice de vetor |
-| `{` | `ABRE_CHAVES` | Delimitador de bloco alternativo |
-| `}` | `FECHA_CHAVES` | Delimitador de bloco alternativo |
 
 ### 9.9 Identificadores
 
-Qualquer sequência que comece com uma letra e seja seguida de letras, dígitos ou underscores, **desde que não seja uma palavra reservada ou tipo**, é reconhecida como identificador.
+Qualquer sequência que comece com uma letra ASCII ou `_` e seja seguida de letras, dígitos ou underscores, **desde que não seja uma palavra reservada ou tipo**, é reconhecida como identificador.
 
-**Padrão:** `{LETRA}({LETRA}|{DIGITO}|_)*`
+**Padrão:** `{LETRA}({LETRA}|{DIGITO})*`
 
 **Exemplos válidos:** `x`, `soma`, `pivo`, `inicio_vetor`, `QuickSort`, `numeros`
 
@@ -338,15 +333,19 @@ Qualquer sequência que comece com uma letra e seja seguida de letras, dígitos 
 Qualquer caractere que não se enquadre em nenhuma das regras anteriores é capturado pela **regra curinga** `.` (ponto), que corresponde a qualquer caractere individual não reconhecido:
 
 ```lex
-.   { printf("Charactere Invalido.\n"); }
+. {
+    fprintf(stderr, "[ERRO L%d:C%d] Caractere invalido: '%s'\n",
+            linha_atual, coluna_atual, yytext);
+    coluna_atual++;
+}
 ```
 
 **Comportamento:** O analisador **não interrompe a execução** ao encontrar um erro. Ele emite a mensagem e **continua processando** o restante do arquivo, permitindo que múltiplos erros sejam identificados em uma única passagem.
 
-**Exemplo prático:** O caractere `@` no arquivo `testes.edu` é propositalmente inválido e produz a saída:
+**Exemplo prático:** Um caractere `@` fora de um texto ou comentário produz uma mensagem com linha e coluna:
 
 ```
-Charactere Invalido.
+[ERRO L3:C5] Caractere invalido: '@'
 ```
 
 ---
@@ -377,8 +376,10 @@ assign : var SINAL_IGUALDADE expr ;
 
 Garante o fechamento correto dos blocos e expressões condicionais internas:
 ```
-if_stmt : SE ABRE_PARENTESES expr FECHA_PARENTESES INICIO stmts else_opt FIM_SE ;
-loop_stmt : ENQUANTO ABRE_PARENTESES expr FECHA_PARENTESES INICIO stmts FIM_ENQUANTO ;
+if_stmt : SE condition INICIO stmts FIM_SE
+        | SE condition INICIO stmts SENAO INICIO stmts FIM_SE ;
+loop_stmt : ENQUANTO condition INICIO stmts FIM_ENQUANTO ;
+condition : ABRE_PARENTESES expr FECHA_PARENTESES ;
 ```
 
 ## 11.4 Precedência Matemática
@@ -403,46 +404,33 @@ void yyerror(const char *s) {
 
 ## 13. Exemplos de Saída
 
-### Entrada (`testes.edu`)
+### Entrada (`exemplo.edu`)
 
-```
-inicio
-  Inteiro numero
-  Texto palavra
-  Real nota
+```edu
+procedimento main() inicio
+    numero: Inteiro = 42
 
-  se Verdadeiro inicio
-    enquanto Falso inicio
-      numero
-    fim_enquanto
-  fim_se
-
-  @
+    se (numero > 0) inicio
+        Escrever(numero)
+    senao inicio
+        Escrever("zero ou negativo")
+    fim_se
 fim
+```
+
+### Compilação
+
+```bash
+./compiler exemplo.edu exemplo.c
+gcc exemplo.c -o exemplo
+./exemplo
 ```
 
 ### Saída esperada
 
-```
-INICIO
-TIPO_INTEIRO
-IDENTIFICADOR(numero)
-TIPO_TEXTO
-IDENTIFICADOR(palavra)
-TIPO_REAL
-IDENTIFICADOR(nota)
-COMENTARIO_LINHA_IGNORADO
-SE
-LITERAL_BOOLEANO(Verdadeiro)
-INICIO
-ENQUANTO
-LITERAL_BOOLEANO(Falso)
-INICIO
-IDENTIFICADOR(numero)
-FIM_ENQUANTO
-FIM_SE
-Charactere Invalido.
-FIM
+```text
+[SUCESSO] Codigo C gerado em: exemplo.c
+42
 ```
 
 ---
@@ -453,7 +441,7 @@ FIM
 
 - `testes/quicksortERRO.edu`: Variante do código acima contendo erros sintáticos deliberados, usado para testar a captura de exceções do Bison.
 
-- `testes/testes.edu`: Avaliação de tipos, operações e literais soltos.
+- `testes/testes.edu`: Avaliação geral dos tipos, operações, laços e entrada/saída.
 
 ---
 
@@ -465,4 +453,3 @@ FIM
 - Disciplina DIM0548 — Engenharia de Linguagens, UFRN
 
 ---
-
