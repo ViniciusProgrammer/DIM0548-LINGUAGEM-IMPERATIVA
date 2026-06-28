@@ -66,8 +66,8 @@ procedimento main() inicio
         criar_racional(c, 1)
     )
 
-    Escrever("Resultado de x^2 - y + c:")
-    Escrever(resultado.numerador)
-    Escrever("/")
+    EscreverSemQuebra("Resultado de x^2 - y + c: ")
+    EscreverSemQuebra(resultado.numerador)
+    EscreverSemQuebra("/")
     Escrever(resultado.denominador)
 fim
