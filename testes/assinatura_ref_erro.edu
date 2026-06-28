@@ -1,0 +1,8 @@
+procedimento Incrementar(ref valor: Inteiro) inicio
+    valor = valor + 1
+fim
+
+procedimento main() inicio
+    x: Inteiro = 1
+    Incrementar(x + 1)
+fim

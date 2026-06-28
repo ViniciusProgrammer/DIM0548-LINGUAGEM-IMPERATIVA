@@ -1,48 +1,68 @@
 # DIM0548-LINGUAGEM-IMPERATIVA
-Analisador léxico e sintático desenvolvido para a disciplina de **DIM0548 - Engenharia de Linguagens**. O compilador valida a gramática da linguagem imperativa educacional `.edu`, identifica palavras reservadas, tipos, variáveis, operadores e captura erros com mensagens de posição exata (`[L<linha>:C<coluna>]`).
 
-## ⚙️ Pré-requisitos (Linux)
-Certifique-se de ter o **Flex**, **Bison** e o **GCC** instalados. 
-Para instalar as dependências, execute:
+Compilador da linguagem imperativa educacional `.edu`. O projeto usa Flex, Bison e GCC para validar léxico, sintaxe e semântica, gerar C e compilar os programas dos problemas.
+
+## Pré-requisitos
+
 ```bash
-sudo apt update && sudo apt install flex gcc -y && sudo apt install bison -y
+sudo apt update
+sudo apt install flex bison gcc make
 ```
 
-## 🚀 Como Compilar
-Na pasta raiz do projeto, dê permissão ao script e execute-o:
+## Build e Testes
 
 ```bash
-chmod +x compilar.sh
-./compilar.sh
+make              # gera ./compiler
+make problemas    # compila os seis programas em problemas/
+make test         # executa testes positivos, negativos e QuickSort
+make rodar        # executa os binarios gerados dos problemas
+make clean        # remove artefatos gerados
 ```
-O script automatiza a geração do analisador sintático pelo Bison, do analisador léxico pelo Flex e realiza a compilação final gerando o executável `./compiler`.
 
-Também é possível executar `make` para gerar o compilador.
+O compilador recebe entrada e saida C:
 
-## 💻 Como Testar
 ```bash
-# Testar com o algoritmo QuickSort (Sintaxe Válida)
 ./compiler testes/quicksort.edu /tmp/quicksort.c
 gcc /tmp/quicksort.c -o /tmp/quicksort
-
-# Testar arquivo com erros sintáticos
-./compiler testes/quicksortERRO.edu /tmp/quicksortERRO.c
-
-# Testar estruturas gerais
-./compiler testes/testes.edu /tmp/testes.c
-gcc /tmp/testes.c -o /tmp/testes
 ```
 
-## ✅ Código de Saída
-O executável recebe os caminhos de entrada e saída e só publica o código C quando não há erros léxicos, sintáticos ou semânticos. O retorno é `0` para sucesso ou `1` para falha.
+O retorno e `0` em sucesso e `1` quando ha erro lexico, sintatico ou semantico. O arquivo C de saida so e publicado quando todas as analises passam.
 
-Exemplo de saída com sucesso (Sintaxe Correta):
-```bash
-[SUCESSO] Codigo C gerado em: /tmp/testes.c
+## Recursos Implementados
+
+- Seis problemas compilaveis via `make problemas`.
+- Testes automatizados positivos e negativos via `make test`.
+- Assinaturas completas de subprogramas: quantidade, ordem e tipos dos argumentos.
+- Parametros `ref` com geracao de ponteiros, enderecos e desreferencias em C.
+- QuickSort no problema 5, validando recursao, vetor como parametro e passagem por referencia.
+- Verificacao estatica de operadores, atribuicoes, condicoes, indices, retornos e chamadas.
+- Divisao com tipo coerente: `Inteiro / Inteiro` permanece inteiro; operacao com `Real` resulta em real.
+- Concatenacao textual com `+` entre dois `Texto`.
+- Constantes imutaveis e obrigatoriamente inicializadas.
+- Vetores e matrizes com multiplas dimensoes, validacao de tipo de indice e checagem estatica de literais fora dos limites.
+- Recursos secundarios: `para`, `alias` e `enum`.
+
+## Sintaxe Adicional
+
+```edu
+alias Numero = Inteiro
+
+enum Cor inicio
+    VERMELHO,
+    VERDE,
+    AZUL
+fim
+
+procedimento main() inicio
+    matriz: Numero[2][3]
+    i: Inteiro = 0
+
+    para (i = 0; i < 3; i = i + 1) inicio
+        matriz[0][i] = i
+    fim_para
+fim
 ```
 
-Exemplo de saída com falha (Erro Sintático):
-```bash
-[ERRO SINTATICO] Linha 4, Coluna 9: syntax error proximo a 'Inteiro'
-[FALHA] Erros encontrados: 0 lexico(s), 1 sintatico(s), 0 semantico(s).
-```
+## Testes Negativos
+
+A pasta `testes/` inclui casos que devem falhar, como erro lexico, erro sintatico, campo inexistente em registro, chamada com tipo errado, argumento `ref` nao enderecavel, alteracao de constante e indice literal fora do limite.

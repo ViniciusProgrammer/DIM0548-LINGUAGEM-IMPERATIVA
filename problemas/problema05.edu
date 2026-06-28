@@ -1,19 +1,54 @@
-funcao mdc(n: Inteiro, m: Inteiro) -> Inteiro
-inicio
-    se (n == 0) inicio
-        retorne m
+procedimento Trocar(ref vetor: Inteiro[], i: Inteiro, j: Inteiro) inicio
+    aux: Inteiro = vetor[i]
+    vetor[i] = vetor[j]
+    vetor[j] = aux
+fim
+
+funcao Particionar(ref vetor: Inteiro[], inicio_vetor: Inteiro, fim_vetor: Inteiro) -> Inteiro inicio
+    pivo: Inteiro = vetor[fim_vetor]
+    i: Inteiro = inicio_vetor - 1
+    j: Inteiro = inicio_vetor
+
+    enquanto (j < fim_vetor) inicio
+        se (vetor[j] <= pivo) inicio
+            i = i + 1
+            Trocar(vetor, i, j)
+        fim_se
+        j = j + 1
+    fim_enquanto
+
+    Trocar(vetor, i + 1, fim_vetor)
+    retorne i + 1
+fim
+
+procedimento QuickSort(ref vetor: Inteiro[], inicio_vetor: Inteiro, fim_vetor: Inteiro) inicio
+    se (inicio_vetor < fim_vetor) inicio
+        pivo: Inteiro = Particionar(vetor, inicio_vetor, fim_vetor)
+        QuickSort(vetor, inicio_vetor, pivo - 1)
+        QuickSort(vetor, pivo + 1, fim_vetor)
     fim_se
-    se (m == 0) inicio
-        retorne n
-    fim_se
-    se (m > n) inicio
-        retorne mdc(n, m % n)
-    fim_se
-    retorne mdc(m, n % m)
 fim
 
 procedimento main() inicio
-    resultado: Inteiro = 0
-    resultado = mdc(12, 8)
-    Escrever(resultado)
+    numeros: Inteiro[8]
+    tamanho: Inteiro = 8
+    cont: Inteiro = 0
+
+    numeros[0] = 12
+    numeros[1] = 4
+    numeros[2] = 9
+    numeros[3] = 1
+    numeros[4] = 7
+    numeros[5] = 3
+    numeros[6] = 8
+    numeros[7] = 2
+
+    QuickSort(numeros, 0, tamanho - 1)
+
+    enquanto (cont < tamanho) inicio
+        EscreverSemQuebra(numeros[cont])
+        EscreverSemQuebra(" ")
+        cont = cont + 1
+    fim_enquanto
+    Escrever("")
 fim

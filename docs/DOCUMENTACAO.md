@@ -458,7 +458,56 @@ gcc exemplo.c -o exemplo
 
 ---
 
-## 15. Referências
+## 15. Atualizacao da Entrega Final
+
+### Comandos principais
+
+```bash
+make
+make problemas
+make test
+```
+
+O alvo `make problemas` compila os seis programas oficiais. O alvo `make test` recompila o compilador, valida casos positivos, confirma que casos negativos falham e executa uma checagem pratica do QuickSort do problema 5.
+
+### Recursos semanticos adicionais
+
+- Assinaturas de subprogramas com quantidade, ordem e tipos dos argumentos.
+- Parametros `ref` com ponteiros em C, endereco na chamada e desreferencia no corpo.
+- Constantes imutaveis e obrigatoriamente inicializadas.
+- Verificacao de operadores, atribuicoes, condicoes, retornos, indices e chamadas.
+- Divisao inteira preservada quando os dois operandos sao `Inteiro`.
+- Concatenacao textual com `+` entre dois valores `Texto`.
+- Vetores e matrizes multidimensionais com validacao estatica de indices literais.
+- `para`, `alias` e `enum`.
+
+### Sintaxe dos recursos secundarios
+
+```edu
+alias Numero = Inteiro
+
+enum Cor inicio
+    VERMELHO,
+    VERDE,
+    AZUL
+fim
+
+para (i = 0; i < 10; i = i + 1) inicio
+    Escrever(i)
+fim_para
+```
+
+### Novos testes
+
+- `testes/assinatura_ref_erro.edu`
+- `testes/chamada_assinatura_erro.edu`
+- `testes/constante_erro.edu`
+- `testes/vetor_indice_erro.edu`
+- `testes/recursos_secundarios.edu`
+
+---
+
+## 16. Referências
 
 - [Manual do Bison — GNU Project](https://www.gnu.org/software/bison/manual/)
 - [Manual do Flex — GNU Project](https://www.gnu.org/software/flex/manual/)

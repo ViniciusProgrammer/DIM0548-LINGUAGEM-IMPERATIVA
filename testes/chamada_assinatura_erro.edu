@@ -1,0 +1,8 @@
+funcao soma(a: Inteiro, b: Inteiro) -> Inteiro inicio
+    retorne a + b
+fim
+
+procedimento main() inicio
+    x: Inteiro = soma(1, "dois")
+    Escrever(x)
+fim

@@ -1,0 +1,4 @@
+procedimento main() inicio
+    Constante LIMITE: Inteiro = 10
+    LIMITE = 11
+fim

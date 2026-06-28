@@ -62,6 +62,8 @@ TEXTO       \"([^\\\"\n]|\\.)*\"
 "fim_se"        { RETORNA(FIM_SE); }
 "enquanto"      { RETORNA(ENQUANTO); }
 "fim_enquanto"  { RETORNA(FIM_ENQUANTO); }
+"para"          { RETORNA(PARA); }
+"fim_para"      { RETORNA(FIM_PARA); }
 "repetir"       { RETORNA(REPETIR); }
 "ate"           { RETORNA(ATE); }
 "inicio"        { RETORNA(INICIO); }
@@ -72,6 +74,8 @@ TEXTO       \"([^\\\"\n]|\\.)*\"
 "ref"           { RETORNA(MODIFICADOR_REF); }
 "Constante"     { RETORNA(CONSTANTE); }
 "tipo"          { RETORNA(TIPO); }
+"alias"         { RETORNA(ALIAS); }
+"enum"          { RETORNA(ENUM); }
 
  /* ── Tipos Primitivos (carregam valor para o parser usar) ── */
 "Inteiro"       { RETORNA_STR(TIPO_INTEIRO); }

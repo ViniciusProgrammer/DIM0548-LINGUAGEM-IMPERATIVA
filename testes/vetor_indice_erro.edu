@@ -1,0 +1,4 @@
+procedimento main() inicio
+    numeros: Inteiro[2]
+    numeros[2] = 10
+fim

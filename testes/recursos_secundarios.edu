@@ -1,0 +1,23 @@
+alias Numero = Inteiro
+
+enum Cor inicio
+    VERMELHO,
+    VERDE,
+    AZUL
+fim
+
+procedimento main() inicio
+    matriz: Numero[2][3]
+    i: Inteiro = 0
+    soma: Numero = 0
+
+    matriz[0][0] = 1
+    matriz[0][1] = 2
+    matriz[0][2] = 3
+
+    para (i = 0; i < 3; i = i + 1) inicio
+        soma = soma + matriz[0][i]
+    fim_para
+
+    Escrever(soma)
+fim

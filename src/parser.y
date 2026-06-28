@@ -19,10 +19,17 @@ void semantic_error(const char *format, ...);
 char * get_base_name(const char * name);
 char * generate_write_code(struct record * expression, int append_newline);
 int publish_output(FILE * source, const char * output_path);
+char * make_arg_meta(struct record * arg);
+char * append_arg_meta(const char * left, struct record * arg);
+char * transform_call_args(const char * function_name, Symbol * function, struct record * args);
+int is_numeric_type(const char * type);
+int is_boolean_type(const char * type);
+int parse_array_sizes(const char * suffix, int * sizes, int max_sizes);
 
 int erros_semanticos = 0;
 int erros_sintaticos = 0;
 char * current_user_type = NULL;
+char * current_function_name = NULL;
 
 /* Saída gerada */
 
@@ -32,7 +39,15 @@ char * cat(char *s1, char *s2, char *s3, char *s4, char *s5);
 static char * c_includes =
     "#include <stdio.h>\n"
     "#include <stdlib.h>\n"
-    "#include <string.h>\n\n";
+    "#include <string.h>\n\n"
+    "static char *edu_concat(const char *a, const char *b) {\n"
+    "    size_t la = strlen(a), lb = strlen(b);\n"
+    "    char *out = malloc(la + lb + 1);\n"
+    "    if (!out) exit(1);\n"
+    "    memcpy(out, a, la);\n"
+    "    memcpy(out + la, b, lb + 1);\n"
+    "    return out;\n"
+    "}\n\n";
 %}
 
 %define parse.error verbose
@@ -44,9 +59,9 @@ static char * c_includes =
 }
 
 /* ── Tokens sem valor ── */
-%token SE SENAO FIM_SE ENQUANTO FIM_ENQUANTO REPETIR ATE INICIO FIM
+%token SE SENAO FIM_SE ENQUANTO FIM_ENQUANTO PARA FIM_PARA REPETIR ATE INICIO FIM
 %token PROCEDIMENTO FUNCAO RETORNE MODIFICADOR_REF MAIN
-%token CONSTANTE TIPO
+%token CONSTANTE TIPO ALIAS ENUM
 %token ESCREVER ESCREVER_SEM_QUEBRA LER
 %token OP_SOMA OP_SUBTRACAO OP_MULTIPLICACAO OP_DIVISAO OP_MODULO
 %token SINAL_IGUALDADE OP_MAIOR OP_MENOR OP_LOGICO_E OP_LOGICO_OU
@@ -61,15 +76,15 @@ static char * c_includes =
 %token <sValue> TIPO_INTEIRO TIPO_REAL TIPO_TEXTO TIPO_BOOLEANO
 
 /* ── Tipos não-terminais que carregam record ── */
-%type <rec> program type_declarations type_declaration field_declarations field_declaration
+%type <rec> program type_declarations type_declaration field_declarations field_declaration enum_items
 %type <rec> subprograms subprogram main_program
 %type <rec> param_list_opt param_list param
 %type <rec> block stmts stmt
-%type <rec> decl assign if_stmt loop_stmt return_stmt io_stmt call_stmt
+%type <rec> decl assign if_stmt loop_stmt for_stmt for_assign return_stmt io_stmt call_stmt
 %type <rec> expr logical_or logical_and equality relational additive
 %type <rec> multiplicative unary primary call_expr var constant
 %type <rec> arg_list_opt arg_list condition
-%type <sValue> type sub_type return_type_opt ref_opt assign_op assign_init_opt array_decl_opt
+%type <sValue> type sub_type return_type_opt ref_opt assign_op assign_init_opt array_decl_opt array_param_opt
 
 %start program
 
@@ -115,6 +130,52 @@ type_declaration
           free(current_user_type);
           current_user_type = NULL;
       }
+    | ALIAS IDENTIFICADOR SINAL_IGUALDADE type stmt_end_opt
+      {
+          if (!type_alias_insert($2, $4))
+              semantic_error("Linha %d: alias '%s' ja declarado", linha_atual, $2);
+          char * body = cat("typedef ", $4, " ", $2, ";\n");
+          $$ = createRecord(body, "");
+          free(body); free($2); free($4);
+      }
+    | ENUM IDENTIFICADOR INICIO enum_items FIM
+      {
+          if (!user_type_insert($2))
+              semantic_error("Linha %d: enum '%s' ja declarado", linha_atual, $2);
+          char * body = cat("typedef enum {\n", $4->code, "} ", $2, ";\n");
+          $$ = createRecord(body, "");
+          free(body); free($2); freeRecord($4);
+      }
+    ;
+
+enum_items
+    : IDENTIFICADOR
+      {
+          if (!sym_insert($1, TYPE_INT, 0, TYPE_VOID))
+              semantic_error("Linha %d: enumerador '%s' ja declarado", linha_atual, $1);
+          else {
+              sym_set_declared_type($1, "int");
+              sym_set_const($1, 1);
+              sym_set_initialized($1, 1);
+          }
+          char * s = cat("    ", $1, "\n", "", "");
+          $$ = createRecord(s, "");
+          free(s); free($1);
+      }
+    | enum_items VIRGULA IDENTIFICADOR
+      {
+          if (!sym_insert($3, TYPE_INT, 0, TYPE_VOID))
+              semantic_error("Linha %d: enumerador '%s' ja declarado", linha_atual, $3);
+          else {
+              sym_set_declared_type($3, "int");
+              sym_set_const($3, 1);
+              sym_set_initialized($3, 1);
+          }
+          char * item = cat("    ", $3, "\n", "", "");
+          char * s = cat($1->code, ",", item, "", "");
+          $$ = createRecord(s, "");
+          free(item); free(s); freeRecord($1); free($3);
+      }
     ;
 
 field_declarations
@@ -157,6 +218,8 @@ subprogram
       {
           if (!sym_insert($2, TYPE_UNKNOWN, 1, TYPE_UNKNOWN))
               semantic_error("Linha %d: subprograma '%s' ja declarado", linha_atual, $2);
+          free(current_function_name);
+          current_function_name = strdup($2);
           scope_push($2, TYPE_UNKNOWN);
       }
       ABRE_PARENTESES param_list_opt FECHA_PARENTESES
@@ -180,6 +243,8 @@ subprogram
           $$ = createRecord(body, "");
           free(body);
           scope_pop();
+          free(current_function_name);
+          current_function_name = NULL;
       }
     ;
 
@@ -212,13 +277,22 @@ param_list
 param
     : ref_opt IDENTIFICADOR DOIS_PONTOS type array_param_opt
       {
-          /* ref_opt: "" ou "*" ; array_param_opt ignorado na geração básica */
-          char * decl = cat($4, " ", $1, $2, "");
+          int is_ref = strcmp($1, "*") == 0;
+          int is_array = strcmp($5, "[]") == 0;
+          char * ptr = (is_ref || is_array) ? "*" : "";
+          char * decl = cat($4, " ", ptr, $2, "");
           if (!sym_insert($2, type_from_string($4), 0, TYPE_VOID))
               semantic_error("Linha %d: parametro '%s' ja declarado", linha_atual, $2);
-          else
+          else {
               sym_set_declared_type($2, $4);
-          free($1); free($2); free($4);
+              sym_set_initialized($2, 1);
+              sym_set_ref($2, is_ref);
+              if (is_array)
+                  sym_set_array($2, 1, NULL);
+          }
+          if (current_function_name)
+              sym_add_param(current_function_name, $2, type_from_string($4), $4, is_ref, is_array, is_array ? 1 : 0);
+          free($1); free($2); free($4); free($5);
           $$ = createRecord(decl, ""); free(decl);
       }
     ;
@@ -230,7 +304,9 @@ ref_opt
 
 array_param_opt
     : %empty
+      { $$ = strdup(""); }
     | ABRE_COLCHETES FECHA_COLCHETES
+      { $$ = strdup("[]"); }
     ;
 
 /* ── Tipos ── */
@@ -241,7 +317,7 @@ type
     | TIPO_TEXTO    { $$ = strdup("char*");  }
     | TIPO_BOOLEANO { $$ = strdup("int");    }
     | IDENTIFICADOR {
-          if (!user_type_lookup($1))
+          if (!user_type_lookup($1) && !type_alias_lookup($1))
               semantic_error("Linha %d: tipo '%s' nao declarado", linha_atual, $1);
           $$ = $1;
       }
@@ -285,6 +361,7 @@ stmt
     | call_stmt     { $$ = $1; }
     | if_stmt       { $$ = $1; }
     | loop_stmt     { $$ = $1; }
+    | for_stmt      { $$ = $1; }
     | return_stmt   { $$ = $1; }
     | io_stmt       { $$ = $1; }
     ;
@@ -294,8 +371,16 @@ decl
       {
           if (!sym_insert($1, type_from_string($3), 0, TYPE_VOID))
               semantic_error("Linha %d: '%s' ja declarado", linha_atual, $1);
-          else
+          else {
               sym_set_declared_type($1, $3);
+              sym_set_initialized($1, $5 != NULL);
+              if ($4 && $4[0] == '[') {
+                  int sizes[8];
+                  int dimensions = parse_array_sizes($4, sizes, 8);
+                  sym_set_array($1, dimensions, sizes);
+                  sym_set_initialized($1, 1);
+              }
+          }
           char * declaration = cat($3, " ", $1, $4, "");
           char * s = cat(declaration, $5 ? $5 : "", ";\n", "", "");
           free(declaration);
@@ -306,8 +391,13 @@ decl
       {
           if (!sym_insert($2, type_from_string($4), 0, TYPE_VOID))
               semantic_error("Linha %d: '%s' ja declarado", linha_atual, $2);
-          else
+          else {
               sym_set_declared_type($2, $4);
+              sym_set_const($2, 1);
+              sym_set_initialized($2, $5 != NULL);
+          }
+          if (!$5)
+              semantic_error("Linha %d: constante '%s' deve ser inicializada", linha_atual, $2);
           char * s = cat("const ", $4, " ", $2, $5 ? $5 : "");
           char * s2 = cat(s, ";\n", "", "", "");
           free(s); free($2); free($4); free($5);
@@ -318,10 +408,10 @@ decl
 array_decl_opt
     : %empty
       { $$ = strdup(""); }
-    | ABRE_COLCHETES constant FECHA_COLCHETES
+    | array_decl_opt ABRE_COLCHETES constant FECHA_COLCHETES
       {
-          $$ = cat("[", $2->code, "]", "", "");
-          freeRecord($2);
+          $$ = cat($1, "[", $3->code, "]", "");
+          free($1); freeRecord($3);
       }
     ;
 
@@ -341,18 +431,21 @@ assign
       {
           /* Verificação de tipo */
           VarType left_type = type_from_string($1->opt1);
+          char * base_for_state = get_base_name($1->code);
+          Symbol * left_sym = sym_lookup(base_for_state);
+          if (left_sym && left_sym->is_const)
+              semantic_error("Linha %d: constante '%s' nao pode ser alterada", linha_atual, base_for_state);
           if (left_type == TYPE_UNKNOWN && strcmp($1->opt1, "desconhecido") == 0) {
-              char * base = get_base_name($1->code);
-              Symbol * sym = sym_lookup(base);
+              Symbol * sym = sym_lookup(base_for_state);
               if (!sym)
-                  semantic_error("Linha %d: '%s' nao declarado", linha_atual, base);
-              free(base);
+                  semantic_error("Linha %d: '%s' nao declarado", linha_atual, base_for_state);
           } else if (strcmp($3->opt1, "desconhecido") != 0 &&
                      !declared_types_compatible($1->opt1, $3->opt1)) {
-              char * base = get_base_name($1->code);
-              semantic_error("Linha %d: tipos incompativeis em '%s'", linha_atual, base);
-              free(base);
+              semantic_error("Linha %d: tipos incompativeis em '%s'", linha_atual, base_for_state);
           }
+          if (left_sym)
+              sym_set_initialized(base_for_state, 1);
+          free(base_for_state);
 
           char * s = cat($1->code, $2, $3->code, ";\n", "");
           freeRecord($1); free($2); freeRecord($3);
@@ -384,7 +477,9 @@ call_expr
           if (!sym || !sym->is_function)
               semantic_error("Linha %d: '%s' nao e funcao declarada", linha_atual, $1);
           char * ret_t = sym ? strdup(sym->return_declared_type) : strdup("desconhecido");
-          char * s = cat($1, "(", $3->code, ")", "");
+          char * args = transform_call_args($1, sym, $3);
+          char * s = cat($1, "(", args, ")", "");
+          free(args);
           free($1); freeRecord($3);
           $$ = createRecord(s, ret_t);
           free(s); free(ret_t);
@@ -398,12 +493,17 @@ arg_list_opt
 
 arg_list
     : expr
-      { $$ = $1; }
+      {
+          char * meta = make_arg_meta($1);
+          $$ = createRecord($1->code, meta);
+          free(meta); freeRecord($1);
+      }
     | arg_list VIRGULA expr
       {
           char * s = cat($1->code, ", ", $3->code, "", "");
+          char * meta = append_arg_meta($1->opt1, $3);
           freeRecord($1); freeRecord($3);
-          $$ = createRecord(s, ""); free(s);
+          $$ = createRecord(s, meta); free(s); free(meta);
       }
     ;
 
@@ -441,7 +541,12 @@ if_stmt
     ;
 
 condition
-    : ABRE_PARENTESES expr FECHA_PARENTESES  { $$ = $2; }
+    : ABRE_PARENTESES expr FECHA_PARENTESES
+      {
+          if (!is_boolean_type($2->opt1))
+              semantic_error("Linha %d: condicao deve ser Booleano", linha_atual);
+          $$ = $2;
+      }
     ;
 
 block_start
@@ -482,11 +587,46 @@ loop_end
     : FIM_ENQUANTO
     ;
 
+for_stmt
+    : PARA ABRE_PARENTESES for_assign PONTO_E_VIRGULA expr PONTO_E_VIRGULA for_assign FECHA_PARENTESES block_start stmts FIM_PARA
+      {
+          if (!is_boolean_type($5->opt1))
+              semantic_error("Linha %d: condicao do para deve ser Booleano", linha_atual);
+          int ls = new_label();
+          int le = new_label();
+          char lss[32], les[32];
+          sprintf(lss, "L%d", ls);
+          sprintf(les, "L%d", le);
+          char * t1 = cat($3->code, ";\n", lss, ":;\n", "");
+          char * t2 = cat(t1, "if(!(", $5->code, ")) goto ", "");
+          char * t3 = cat(t2, les, ";\n", $10->code, "");
+          char * t4 = cat(t3, $7->code, ";\n", "goto ", "");
+          char * t5 = cat(t4, lss, ";\n", les, ":;\n");
+          $$ = createRecord(t5, "");
+          free(t1); free(t2); free(t3); free(t4); free(t5);
+          freeRecord($3); freeRecord($5); freeRecord($7); freeRecord($10);
+      }
+    ;
+
+for_assign
+    : var assign_op expr
+      {
+          if (strcmp($3->opt1, "desconhecido") != 0 &&
+              !declared_types_compatible($1->opt1, $3->opt1))
+              semantic_error("Linha %d: tipos incompativeis no para", linha_atual);
+          char * s = cat($1->code, $2, $3->code, "", "");
+          $$ = createRecord(s, "");
+          free(s); freeRecord($1); free($2); freeRecord($3);
+      }
+    ;
+
 return_stmt
     : RETORNE expr
       {
           ScopeEntry * top = scope_top();
           if (top) {
+              if (top->return_type == TYPE_VOID)
+                  semantic_error("Linha %d: procedimento nao deve retornar valor", linha_atual);
               if (strcmp($2->opt1, "desconhecido") != 0 &&
                   !declared_types_compatible(top->return_declared_type, $2->opt1))
                   semantic_error("Linha %d: tipo de retorno incompativel", linha_atual);
@@ -534,6 +674,10 @@ io_stmt
       {
           char * base = get_base_name($3->code);
           Symbol * sym = sym_lookup(base);
+          if (sym && sym->is_const)
+              semantic_error("Linha %d: constante '%s' nao pode ser lida como destino", linha_atual, base);
+          if (sym)
+              sym_set_initialized(base, 1);
           free(base);
           char fmt[8] = "%d";
           if (sym) {
@@ -551,44 +695,76 @@ expr        : logical_or    { $$ = $1; } ;
 
 logical_or
     : logical_or OP_LOGICO_OU logical_and
-      { char*s=cat($1->code,"||",$3->code,"",""); freeRecord($1);freeRecord($3); $$=createRecord(s,"int");free(s); }
+      {
+          if (!is_boolean_type($1->opt1) || !is_boolean_type($3->opt1))
+              semantic_error("Linha %d: operador || exige Booleano", linha_atual);
+          char*s=cat($1->code,"||",$3->code,"",""); freeRecord($1);freeRecord($3); $$=createRecord(s,"int");free(s);
+      }
     | logical_and   { $$ = $1; }
     ;
 
 logical_and
     : logical_and OP_LOGICO_E equality
-      { char*s=cat($1->code,"&&",$3->code,"",""); freeRecord($1);freeRecord($3); $$=createRecord(s,"int");free(s); }
+      {
+          if (!is_boolean_type($1->opt1) || !is_boolean_type($3->opt1))
+              semantic_error("Linha %d: operador && exige Booleano", linha_atual);
+          char*s=cat($1->code,"&&",$3->code,"",""); freeRecord($1);freeRecord($3); $$=createRecord(s,"int");free(s);
+      }
     | equality      { $$ = $1; }
     ;
 
 equality
     : equality OP_IGUAL relational
-      { char*s=cat($1->code,"==",$3->code,"",""); freeRecord($1);freeRecord($3); $$=createRecord(s,"int");free(s); }
+      {
+          if (!declared_types_compatible($1->opt1, $3->opt1))
+              semantic_error("Linha %d: comparacao entre tipos incompativeis", linha_atual);
+          char*s=cat($1->code,"==",$3->code,"",""); freeRecord($1);freeRecord($3); $$=createRecord(s,"int");free(s);
+      }
     | equality OP_DIFERENTE relational
-      { char*s=cat($1->code,"!=",$3->code,"",""); freeRecord($1);freeRecord($3); $$=createRecord(s,"int");free(s); }
+      {
+          if (!declared_types_compatible($1->opt1, $3->opt1))
+              semantic_error("Linha %d: comparacao entre tipos incompativeis", linha_atual);
+          char*s=cat($1->code,"!=",$3->code,"",""); freeRecord($1);freeRecord($3); $$=createRecord(s,"int");free(s);
+      }
     | relational    { $$ = $1; }
     ;
 
 relational
     : relational OP_MENOR additive
-      { char*s=cat($1->code,"<",$3->code,"",""); freeRecord($1);freeRecord($3); $$=createRecord(s,"int");free(s); }
+      { if(!is_numeric_type($1->opt1)||!is_numeric_type($3->opt1)) semantic_error("Linha %d: operador relacional exige numeros", linha_atual); char*s=cat($1->code,"<",$3->code,"",""); freeRecord($1);freeRecord($3); $$=createRecord(s,"int");free(s); }
     | relational OP_MAIOR additive
-      { char*s=cat($1->code,">",$3->code,"",""); freeRecord($1);freeRecord($3); $$=createRecord(s,"int");free(s); }
+      { if(!is_numeric_type($1->opt1)||!is_numeric_type($3->opt1)) semantic_error("Linha %d: operador relacional exige numeros", linha_atual); char*s=cat($1->code,">",$3->code,"",""); freeRecord($1);freeRecord($3); $$=createRecord(s,"int");free(s); }
     | relational OP_MENOR_IGUAL additive
-      { char*s=cat($1->code,"<=",$3->code,"",""); freeRecord($1);freeRecord($3); $$=createRecord(s,"int");free(s); }
+      { if(!is_numeric_type($1->opt1)||!is_numeric_type($3->opt1)) semantic_error("Linha %d: operador relacional exige numeros", linha_atual); char*s=cat($1->code,"<=",$3->code,"",""); freeRecord($1);freeRecord($3); $$=createRecord(s,"int");free(s); }
     | relational OP_MAIOR_IGUAL additive
-      { char*s=cat($1->code,">=",$3->code,"",""); freeRecord($1);freeRecord($3); $$=createRecord(s,"int");free(s); }
+      { if(!is_numeric_type($1->opt1)||!is_numeric_type($3->opt1)) semantic_error("Linha %d: operador relacional exige numeros", linha_atual); char*s=cat($1->code,">=",$3->code,"",""); freeRecord($1);freeRecord($3); $$=createRecord(s,"int");free(s); }
     | additive      { $$ = $1; }
     ;
 
 additive
     : additive OP_SOMA multiplicative
       {
-          VarType t = (type_from_string($1->opt1)==TYPE_FLOAT || type_from_string($3->opt1)==TYPE_FLOAT) ? TYPE_FLOAT : TYPE_INT;
-          char*s=cat($1->code,"+",$3->code,"",""); freeRecord($1);freeRecord($3); $$=createRecord(s,type_name(t));free(s);
+          VarType lt = type_from_string($1->opt1), rt = type_from_string($3->opt1);
+          char *s;
+          const char * result_type;
+          if (lt == TYPE_STRING || rt == TYPE_STRING) {
+              if (lt != TYPE_STRING || rt != TYPE_STRING)
+                  semantic_error("Linha %d: concatenacao textual exige dois Textos", linha_atual);
+              s = cat("edu_concat(", $1->code, ", ", $3->code, ")");
+              result_type = "char*";
+          } else {
+              if (!is_numeric_type($1->opt1) || !is_numeric_type($3->opt1))
+                  semantic_error("Linha %d: operador + exige numeros ou Textos", linha_atual);
+              VarType t = (lt==TYPE_FLOAT || rt==TYPE_FLOAT) ? TYPE_FLOAT : TYPE_INT;
+              s=cat($1->code,"+",$3->code,"","");
+              result_type = type_name(t);
+          }
+          freeRecord($1);freeRecord($3); $$=createRecord(s,result_type);free(s);
       }
     | additive OP_SUBTRACAO multiplicative
       {
+          if (!is_numeric_type($1->opt1) || !is_numeric_type($3->opt1))
+              semantic_error("Linha %d: operador - exige numeros", linha_atual);
           VarType t = (type_from_string($1->opt1)==TYPE_FLOAT || type_from_string($3->opt1)==TYPE_FLOAT) ? TYPE_FLOAT : TYPE_INT;
           char*s=cat($1->code,"-",$3->code,"",""); freeRecord($1);freeRecord($3); $$=createRecord(s,type_name(t));free(s);
       }
@@ -598,21 +774,32 @@ additive
 multiplicative
     : multiplicative OP_MULTIPLICACAO unary
       {
+          if (!is_numeric_type($1->opt1) || !is_numeric_type($3->opt1))
+              semantic_error("Linha %d: operador * exige numeros", linha_atual);
           VarType t = (type_from_string($1->opt1)==TYPE_FLOAT || type_from_string($3->opt1)==TYPE_FLOAT) ? TYPE_FLOAT : TYPE_INT;
           char*s=cat($1->code,"*",$3->code,"",""); freeRecord($1);freeRecord($3); $$=createRecord(s,type_name(t));free(s);
       }
     | multiplicative OP_DIVISAO unary
-      { char*s=cat($1->code,"/",$3->code,"",""); freeRecord($1);freeRecord($3); $$=createRecord(s,"float");free(s); }
+      {
+          if (!is_numeric_type($1->opt1) || !is_numeric_type($3->opt1))
+              semantic_error("Linha %d: operador / exige numeros", linha_atual);
+          VarType t = (type_from_string($1->opt1)==TYPE_FLOAT || type_from_string($3->opt1)==TYPE_FLOAT) ? TYPE_FLOAT : TYPE_INT;
+          char*s=cat($1->code,"/",$3->code,"",""); freeRecord($1);freeRecord($3); $$=createRecord(s,type_name(t));free(s);
+      }
     | multiplicative OP_MODULO unary
-      { char*s=cat($1->code,"%",$3->code,"",""); freeRecord($1);freeRecord($3); $$=createRecord(s,"int");free(s); }
+      {
+          if (type_from_string($1->opt1) != TYPE_INT || type_from_string($3->opt1) != TYPE_INT)
+              semantic_error("Linha %d: operador %% exige Inteiro", linha_atual);
+          char*s=cat($1->code,"%",$3->code,"",""); freeRecord($1);freeRecord($3); $$=createRecord(s,"int");free(s);
+      }
     | unary     { $$ = $1; }
     ;
 
 unary
     : OP_LOGICO_NAO unary
-      { char*s=cat("!(",$2->code,")","",""); char*o=strdup($2->opt1); freeRecord($2); $$=createRecord(s,o);free(s);free(o); }
+      { if(!is_boolean_type($2->opt1)) semantic_error("Linha %d: operador ! exige Booleano", linha_atual); char*s=cat("!(",$2->code,")","",""); freeRecord($2); $$=createRecord(s,"int");free(s); }
     | OP_SUBTRACAO unary
-      { char*s=cat("-(",$2->code,")","",""); char*o=strdup($2->opt1); freeRecord($2); $$=createRecord(s,o);free(s);free(o); }
+      { if(!is_numeric_type($2->opt1)) semantic_error("Linha %d: operador unario - exige numero", linha_atual); char*s=cat("-(",$2->code,")","",""); char*o=strdup($2->opt1); freeRecord($2); $$=createRecord(s,o);free(s);free(o); }
     | OP_SOMA unary
       { $$ = $2; }
     | primary   { $$ = $1; }
@@ -633,18 +820,56 @@ var
           if (!sym)
               semantic_error("Linha %d: '%s' nao declarado", linha_atual, $1);
           char * t = sym ? strdup(sym->declared_type) : strdup("desconhecido");
-          $$ = createRecord($1, t);   /* code = nome C, opt1 = tipo */
+          char * code = (sym && sym->is_ref && !sym->is_array) ? cat("(*", $1, ")", "", "") : strdup($1);
+          $$ = createRecord(code, t);   /* code = nome C, opt1 = tipo */
           /* reuse: code = nome C, opt1 = nome para lookup */
-          free(t); free($1);
+          free(code); free(t); free($1);
       }
     | IDENTIFICADOR ABRE_COLCHETES expr FECHA_COLCHETES
       {
           Symbol * sym = sym_lookup($1);
           if (!sym)
               semantic_error("Linha %d: '%s' nao declarado", linha_atual, $1);
+          else if (!sym->is_array)
+              semantic_error("Linha %d: '%s' nao e vetor ou matriz", linha_atual, $1);
+          if (type_from_string($3->opt1) != TYPE_INT)
+              semantic_error("Linha %d: indice de '%s' deve ser Inteiro", linha_atual, $1);
+          if (sym && sym->dimensions > 0 && $3->code[0] >= '0' && $3->code[0] <= '9') {
+              int idx = atoi($3->code);
+              if (idx < 0 || idx >= sym->array_sizes[0])
+                  semantic_error("Linha %d: indice %d fora dos limites de '%s'", linha_atual, idx, $1);
+          }
           char * t = sym ? strdup(sym->declared_type) : strdup("desconhecido");
           char * s = cat($1, "[", $3->code, "]", "");
           freeRecord($3);
+          $$ = createRecord(s, t);
+          free(s); free($1); free(t);
+      }
+    | IDENTIFICADOR ABRE_COLCHETES expr FECHA_COLCHETES ABRE_COLCHETES expr FECHA_COLCHETES
+      {
+          Symbol * sym = sym_lookup($1);
+          if (!sym)
+              semantic_error("Linha %d: '%s' nao declarado", linha_atual, $1);
+          else if (!sym->is_array || sym->dimensions < 2)
+              semantic_error("Linha %d: '%s' nao e matriz bidimensional", linha_atual, $1);
+          if (type_from_string($3->opt1) != TYPE_INT || type_from_string($6->opt1) != TYPE_INT)
+              semantic_error("Linha %d: indices de '%s' devem ser Inteiro", linha_atual, $1);
+          if (sym && sym->dimensions >= 2) {
+              if ($3->code[0] >= '0' && $3->code[0] <= '9') {
+                  int idx = atoi($3->code);
+                  if (idx < 0 || idx >= sym->array_sizes[0])
+                      semantic_error("Linha %d: primeiro indice %d fora dos limites de '%s'", linha_atual, idx, $1);
+              }
+              if ($6->code[0] >= '0' && $6->code[0] <= '9') {
+                  int idx = atoi($6->code);
+                  if (idx < 0 || idx >= sym->array_sizes[1])
+                      semantic_error("Linha %d: segundo indice %d fora dos limites de '%s'", linha_atual, idx, $1);
+              }
+          }
+          char * t = sym ? strdup(sym->declared_type) : strdup("desconhecido");
+          char * prefix = cat($1, "[", $3->code, "]", "");
+          char * s = cat(prefix, "[", $6->code, "]", "");
+          free(prefix); freeRecord($3); freeRecord($6);
           $$ = createRecord(s, t);
           free(s); free($1); free(t);
       }
@@ -699,6 +924,105 @@ char * cat(char *s1, char *s2, char *s3, char *s4, char *s5) {
     char * out = malloc(tam);
     if (!out) { fprintf(stderr, "Sem memoria\n"); exit(1); }
     sprintf(out, "%s%s%s%s%s", s1, s2, s3, s4, s5);
+    return out;
+}
+
+int is_numeric_type(const char * type) {
+    VarType t = type_from_string(type);
+    return t == TYPE_INT || t == TYPE_FLOAT;
+}
+
+int is_boolean_type(const char * type) {
+    VarType t = type_from_string(type);
+    return t == TYPE_BOOL || t == TYPE_INT;
+}
+
+int parse_array_sizes(const char * suffix, int * sizes, int max_sizes) {
+    int count = 0;
+    const char * p = suffix;
+    while (p && *p && count < max_sizes) {
+        const char * open = strchr(p, '[');
+        if (!open) break;
+        sizes[count++] = atoi(open + 1);
+        p = strchr(open, ']');
+        if (!p) break;
+        p++;
+    }
+    return count;
+}
+
+char * make_arg_meta(struct record * arg) {
+    return cat(arg->code, "\037", arg->opt1, "", "");
+}
+
+char * append_arg_meta(const char * left, struct record * arg) {
+    char * one = make_arg_meta(arg);
+    char * out = cat((char *)left, "\036", one, "", "");
+    free(one);
+    return out;
+}
+
+static char * dup_range(const char * start, size_t len) {
+    char * out = malloc(len + 1);
+    if (!out) { fprintf(stderr, "Sem memoria\n"); exit(1); }
+    memcpy(out, start, len);
+    out[len] = '\0';
+    return out;
+}
+
+char * transform_call_args(const char * function_name, Symbol * function, struct record * args) {
+    if (!function)
+        return strdup(args ? args->code : "");
+
+    const char * cursor = args ? args->opt1 : "";
+    ParamInfo * param = function->params;
+    char * out = strdup("");
+    int count = 0;
+
+    while (cursor && *cursor) {
+        const char * sep = strchr(cursor, '\037');
+        const char * end = strchr(cursor, '\036');
+        if (!sep || (end && sep > end)) break;
+
+        char * code = dup_range(cursor, (size_t)(sep - cursor));
+        char * type = end ? dup_range(sep + 1, (size_t)(end - sep - 1)) : strdup(sep + 1);
+
+        if (!param) {
+            semantic_error("Linha %d: chamada de '%s' recebeu argumentos demais", linha_atual, function_name);
+        } else {
+            if (!declared_types_compatible(param->declared_type, type))
+                semantic_error("Linha %d: argumento %d de '%s' deveria ser %s",
+                               linha_atual, count + 1, function_name, param->declared_type);
+            if (param->is_ref && !sym_is_addressable_expression(code))
+                semantic_error("Linha %d: argumento %d de '%s' deve ser variavel para ref",
+                               linha_atual, count + 1, function_name);
+        }
+
+        char * emitted;
+        if (param && param->is_ref && !param->is_array)
+            emitted = cat("&", code, "", "", "");
+        else
+            emitted = strdup(code);
+
+        char * next = count == 0 ? strdup(emitted) : cat(out, ", ", emitted, "", "");
+        free(out);
+        out = next;
+
+        free(emitted);
+        free(code);
+        free(type);
+        if (param) param = param->next;
+        count++;
+        cursor = end ? end + 1 : NULL;
+    }
+
+    if (param)
+        semantic_error("Linha %d: chamada de '%s' recebeu poucos argumentos", linha_atual, function_name);
+
+    if (count != function->param_count)
+        semantic_error("Linha %d: '%s' espera %d argumento(s), recebeu %d",
+                       linha_atual, function_name, function->param_count, count);
+
     return out;
 }
 
