@@ -340,7 +340,7 @@ Qualquer caractere que não se enquadre em nenhuma das regras anteriores é capt
 }
 ```
 
-**Comportamento:** O analisador **não interrompe a execução** ao encontrar um erro. Ele emite a mensagem e **continua processando** o restante do arquivo, permitindo que múltiplos erros sejam identificados em uma única passagem.
+**Comportamento:** O lexer continua examinando o arquivo para localizar outros problemas, mas o erro léxico faz a compilação terminar com falha. Nenhum código C é publicado no caminho de saída.
 
 **Exemplo prático:** Um caractere `@` fora de um texto ou comentário produz uma mensagem com linha e coluna:
 
@@ -400,6 +400,8 @@ void yyerror(const char *s) {
 }
 ```
 
+Erros léxicos, sintáticos ou semânticos impedem a publicação do arquivo C. Se já existir uma saída antiga no caminho solicitado, ela é removida para não ser confundida com o resultado da compilação atual.
+
 ---
 
 ## 13. Exemplos de Saída
@@ -442,6 +444,10 @@ gcc exemplo.c -o exemplo
 - `testes/quicksortERRO.edu`: Variante do código acima contendo erros sintáticos deliberados, usado para testar a captura de exceções do Bison.
 
 - `testes/testes.edu`: Avaliação geral dos tipos, operações, laços e entrada/saída.
+
+- `testes/erro_lexico.edu`: Contém um caractere inválido e verifica o bloqueio da saída C.
+
+- `testes/erro_semantico.edu`: Contém uma atribuição incompatível e verifica o bloqueio da saída C.
 
 ---
 

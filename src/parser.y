@@ -1,6 +1,7 @@
 %{
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
 #include "../tabela/tabela_simbolos.h"
 #include "../lib/labels.h"
@@ -9,12 +10,18 @@
 extern int yylex();
 extern int linha_atual;
 extern int coluna_atual;
+extern int erros_lexicos;
 extern char* yytext;
 extern FILE * yyout;
 
 void yyerror(const char *s);
+void semantic_error(const char *format, ...);
 char * get_base_name(const char * name);
 char * generate_write_code(struct record * expression, int append_newline);
+int publish_output(FILE * source, const char * output_path);
+
+int erros_semanticos = 0;
+int erros_sintaticos = 0;
 
 /* Saída gerada */
 
@@ -94,7 +101,8 @@ subprogram
       {
           /* Registra função no escopo global antes de entrar no escopo dela */
           VarType rt = type_from_string($6 ? $6 : "vazio");
-          sym_insert($2, rt, 1, rt);
+          if (!sym_insert($2, rt, 1, rt))
+              semantic_error("Linha %d: subprograma '%s' ja declarado", linha_atual, $2);
           scope_push($2, rt);
       }
       block
@@ -216,7 +224,7 @@ decl
     : IDENTIFICADOR DOIS_PONTOS type array_decl_opt assign_init_opt
       {
           if (!sym_insert($1, type_from_string($3), 0, TYPE_VOID))
-              fprintf(stderr, "[ERRO SEMANTICO] Linha %d: '%s' ja declarado\n", linha_atual, $1);
+              semantic_error("Linha %d: '%s' ja declarado", linha_atual, $1);
           char * declaration = cat($3, " ", $1, $4, "");
           char * s = cat(declaration, $5 ? $5 : "", ";\n", "", "");
           free(declaration);
@@ -226,7 +234,7 @@ decl
     | CONSTANTE IDENTIFICADOR DOIS_PONTOS type assign_init_opt
       {
           if (!sym_insert($2, type_from_string($4), 0, TYPE_VOID))
-              fprintf(stderr, "[ERRO SEMANTICO] Linha %d: '%s' ja declarado\n", linha_atual, $2);
+              semantic_error("Linha %d: '%s' ja declarado", linha_atual, $2);
           char * s = cat("const ", $4, " ", $2, $5 ? $5 : "");
           char * s2 = cat(s, ";\n", "", "", "");
           free(s); free($2); free($4); free($5);
@@ -264,12 +272,12 @@ assign
               char * base = get_base_name($1->code);
               Symbol * sym = sym_lookup(base);
               if (!sym)
-                  fprintf(stderr, "[ERRO SEMANTICO] Linha %d: '%s' nao declarado\n", linha_atual, base);
+                  semantic_error("Linha %d: '%s' nao declarado", linha_atual, base);
               free(base);
           } else if (!types_compatible(left_type, type_from_string($3->opt1)) &&
                      type_from_string($3->opt1) != TYPE_UNKNOWN) {
               char * base = get_base_name($1->code);
-              fprintf(stderr, "[ERRO SEMANTICO] Linha %d: tipos incompativeis em '%s'\n", linha_atual, base);
+              semantic_error("Linha %d: tipos incompativeis em '%s'", linha_atual, base);
               free(base);
           }
 
@@ -301,7 +309,7 @@ call_expr
       {
           Symbol * sym = sym_lookup($1);
           if (!sym || !sym->is_function)
-              fprintf(stderr, "[ERRO SEMANTICO] Linha %d: '%s' nao e funcao declarada\n", linha_atual, $1);
+              semantic_error("Linha %d: '%s' nao e funcao declarada", linha_atual, $1);
           char * ret_t = sym ? strdup(type_name(sym->return_type)) : strdup("desconhecido");
           char * s = cat($1, "(", $3->code, ")", "");
           free($1); freeRecord($3);
@@ -408,7 +416,7 @@ return_stmt
           if (top) {
               VarType et = type_from_string($2->opt1);
               if (et != TYPE_UNKNOWN && !types_compatible(top->return_type, et))
-                  fprintf(stderr, "[ERRO SEMANTICO] Linha %d: tipo de retorno incompativel\n", linha_atual);
+                  semantic_error("Linha %d: tipo de retorno incompativel", linha_atual);
           }
           char * s = cat("return ", $2->code, ";\n", "", "");
           freeRecord($2);
@@ -550,7 +558,7 @@ var
       {
           Symbol * sym = sym_lookup($1);
           if (!sym)
-              fprintf(stderr, "[ERRO SEMANTICO] Linha %d: '%s' nao declarado\n", linha_atual, $1);
+              semantic_error("Linha %d: '%s' nao declarado", linha_atual, $1);
           char * t = sym ? strdup(type_name(sym->type)) : strdup("desconhecido");
           $$ = createRecord($1, t);   /* code = nome C, opt1 = tipo */
           /* reuse: code = nome C, opt1 = nome para lookup */
@@ -560,7 +568,7 @@ var
       {
           Symbol * sym = sym_lookup($1);
           if (!sym)
-              fprintf(stderr, "[ERRO SEMANTICO] Linha %d: '%s' nao declarado\n", linha_atual, $1);
+              semantic_error("Linha %d: '%s' nao declarado", linha_atual, $1);
           char * t = sym ? strdup(type_name(sym->type)) : strdup("desconhecido");
           char * s = cat($1, "[", $3->code, "]", "");
           freeRecord($3);
@@ -571,7 +579,7 @@ var
       {
           Symbol * sym = sym_lookup($1);
           if (!sym)
-              fprintf(stderr, "[ERRO SEMANTICO] Linha %d: '%s' nao declarado\n", linha_atual, $1);
+              semantic_error("Linha %d: '%s' nao declarado", linha_atual, $1);
           VarType field_type = TYPE_UNKNOWN;
           if (sym && sym->type == TYPE_RATIONAL) {
               if (strcmp($3, "numerador") == 0 || strcmp($3, "denominador") == 0)
@@ -594,8 +602,20 @@ constant
 %%
 
 void yyerror(const char *s) {
+    erros_sintaticos++;
     fprintf(stderr, "[ERRO SINTATICO] Linha %d, Coluna %d: %s proximo a '%s'\n",
             linha_atual, coluna_atual, s, yytext);
+}
+
+void semantic_error(const char *format, ...) {
+    va_list args;
+
+    erros_semanticos++;
+    fprintf(stderr, "[ERRO SEMANTICO] ");
+    va_start(args, format);
+    vfprintf(stderr, format, args);
+    va_end(args);
+    fprintf(stderr, "\n");
 }
 
 char * cat(char *s1, char *s2, char *s3, char *s4, char *s5) {
@@ -651,17 +671,62 @@ char * generate_write_code(struct record * expression, int append_newline) {
     return cat("printf(", format, ", (int)(", expression->code, "));\n");
 }
 
+int publish_output(FILE * source, const char * output_path) {
+    char buffer[4096];
+    size_t bytes_read;
+    int success = 1;
+    FILE * output = fopen(output_path, "w");
+
+    if (!output) {
+        perror(output_path);
+        return 0;
+    }
+
+    rewind(source);
+    while ((bytes_read = fread(buffer, 1, sizeof(buffer), source)) > 0) {
+        if (fwrite(buffer, 1, bytes_read, output) != bytes_read) {
+            perror(output_path);
+            success = 0;
+            break;
+        }
+    }
+
+    if (ferror(source)) {
+        fprintf(stderr, "Erro ao ler o codigo C temporario.\n");
+        success = 0;
+    }
+
+    if (fclose(output) != 0) {
+        perror(output_path);
+        success = 0;
+    }
+
+    if (!success)
+        remove(output_path);
+
+    return success;
+}
+
 int main(int argc, char ** argv) {
     if (argc != 3) {
         fprintf(stderr, "Uso: ./compiler entrada.edu saida.c\n");
         return 1;
     }
 
+    if (strcmp(argv[1], argv[2]) == 0) {
+        fprintf(stderr, "Os arquivos de entrada e saida devem ser diferentes.\n");
+        return 1;
+    }
+
     FILE * fin = fopen(argv[1], "r");
     if (!fin) { perror(argv[1]); return 1; }
 
-    yyout = fopen(argv[2], "w");
-    if (!yyout) { perror(argv[2]); return 1; }
+    yyout = tmpfile();
+    if (!yyout) {
+        perror("Nao foi possivel criar a saida temporaria");
+        fclose(fin);
+        return 1;
+    }
 
     extern FILE * yyin;
     extern FILE * yyout;
@@ -671,16 +736,36 @@ int main(int argc, char ** argv) {
     labels_init();
     scope_push("global", TYPE_VOID);
 
-    int result = yyparse();
+    int parse_result = yyparse();
+    int analyses_succeeded = parse_result == 0 &&
+                             erros_lexicos == 0 &&
+                             erros_sintaticos == 0 &&
+                             erros_semanticos == 0;
+    int output_published = 0;
+
+    if (analyses_succeeded) {
+        output_published = publish_output(yyout, argv[2]);
+        if (!output_published)
+            remove(argv[2]);
+    } else {
+        remove(argv[2]);
+    }
 
     symtable_free();
     fclose(fin);
     fclose(yyout);
 
-    if (result == 0)
+    if (analyses_succeeded && output_published) {
         printf("[SUCESSO] Codigo C gerado em: %s\n", argv[2]);
-    else
-        printf("[FALHA] Erros encontrados.\n");
+        return 0;
+    }
 
-    return result;
+    if (!analyses_succeeded) {
+        printf("[FALHA] Erros encontrados: %d lexico(s), %d sintatico(s), %d semantico(s).\n",
+               erros_lexicos, erros_sintaticos, erros_semanticos);
+    } else {
+        printf("[FALHA] Nao foi possivel publicar o codigo C.\n");
+    }
+
+    return 1;
 }

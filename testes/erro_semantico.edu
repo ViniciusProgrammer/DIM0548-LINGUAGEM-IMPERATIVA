@@ -1,0 +1,5 @@
+procedimento main() inicio
+    numero: Inteiro = 1
+    numero = "texto"
+    Escrever(numero)
+fim
