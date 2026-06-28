@@ -22,6 +22,7 @@ int publish_output(FILE * source, const char * output_path);
 
 int erros_semanticos = 0;
 int erros_sintaticos = 0;
+char * current_user_type = NULL;
 
 /* Saída gerada */
 
@@ -31,8 +32,7 @@ char * cat(char *s1, char *s2, char *s3, char *s4, char *s5);
 static char * c_includes =
     "#include <stdio.h>\n"
     "#include <stdlib.h>\n"
-    "#include <string.h>\n\n"
-    "typedef struct { int numerador; int denominador; } rational_t;\n\n";
+    "#include <string.h>\n\n";
 %}
 
 %define parse.error verbose
@@ -46,7 +46,7 @@ static char * c_includes =
 /* ── Tokens sem valor ── */
 %token SE SENAO FIM_SE ENQUANTO FIM_ENQUANTO REPETIR ATE INICIO FIM
 %token PROCEDIMENTO FUNCAO RETORNE MODIFICADOR_REF MAIN
-%token CONSTANTE
+%token CONSTANTE TIPO
 %token ESCREVER ESCREVER_SEM_QUEBRA LER
 %token OP_SOMA OP_SUBTRACAO OP_MULTIPLICACAO OP_DIVISAO OP_MODULO
 %token SINAL_IGUALDADE OP_MAIOR OP_MENOR OP_LOGICO_E OP_LOGICO_OU
@@ -61,7 +61,8 @@ static char * c_includes =
 %token <sValue> TIPO_INTEIRO TIPO_REAL TIPO_TEXTO TIPO_BOOLEANO
 
 /* ── Tipos não-terminais que carregam record ── */
-%type <rec> program subprograms subprogram main_program
+%type <rec> program type_declarations type_declaration field_declarations field_declaration
+%type <rec> subprograms subprogram main_program
 %type <rec> param_list_opt param_list param
 %type <rec> block stmts stmt
 %type <rec> decl assign if_stmt loop_stmt return_stmt io_stmt call_stmt
@@ -75,13 +76,70 @@ static char * c_includes =
 %%
 
 program
-    : subprograms main_program
+    : type_declarations subprograms main_program
       {
-          char * s = cat(c_includes, $1->code, "\n", $2->code, "");
+          char * prefix = cat(c_includes, $1->code, "\n", $2->code, "\n");
+          char * s = cat(prefix, $3->code, "", "", "");
           fprintf(yyout, "%s", s);
-          free(s);
+          free(prefix); free(s);
           freeRecord($1);
           freeRecord($2);
+          freeRecord($3);
+      }
+    ;
+
+type_declarations
+    : %empty
+      { $$ = createRecord("", ""); }
+    | type_declarations type_declaration
+      {
+          char * s = cat($1->code, "\n", $2->code, "", "");
+          freeRecord($1); freeRecord($2);
+          $$ = createRecord(s, ""); free(s);
+      }
+    ;
+
+type_declaration
+    : TIPO IDENTIFICADOR
+      {
+          if (!user_type_insert($2))
+              semantic_error("Linha %d: tipo '%s' ja declarado", linha_atual, $2);
+          free(current_user_type);
+          current_user_type = strdup($2);
+      }
+      INICIO field_declarations FIM
+      {
+          char * body = cat("typedef struct {\n", $5->code, "} ", $2, ";\n");
+          $$ = createRecord(body, "");
+          free(body); freeRecord($5); free($2);
+          free(current_user_type);
+          current_user_type = NULL;
+      }
+    ;
+
+field_declarations
+    : %empty
+      { $$ = createRecord("", ""); }
+    | field_declarations field_declaration
+      {
+          char * s = cat($1->code, $2->code, "", "", "");
+          freeRecord($1); freeRecord($2);
+          $$ = createRecord(s, ""); free(s);
+      }
+    ;
+
+field_declaration
+    : IDENTIFICADOR DOIS_PONTOS type stmt_end_opt
+      {
+          VarType field_type = type_from_string($3);
+          if (current_user_type && strcmp(current_user_type, $3) == 0)
+              semantic_error("Linha %d: tipo recursivo '%s' nao e permitido", linha_atual, $3);
+          if (!user_type_add_field(current_user_type, $1, field_type, $3))
+              semantic_error("Linha %d: campo '%s' ja declarado em '%s'",
+                             linha_atual, $1, current_user_type ? current_user_type : "");
+          char * s = cat("    ", $3, " ", $1, ";\n");
+          $$ = createRecord(s, "");
+          free(s); free($1); free($3);
       }
     ;
 
@@ -96,25 +154,29 @@ subprograms
 
 subprogram
     : sub_type IDENTIFICADOR
+      {
+          if (!sym_insert($2, TYPE_UNKNOWN, 1, TYPE_UNKNOWN))
+              semantic_error("Linha %d: subprograma '%s' ja declarado", linha_atual, $2);
+          scope_push($2, TYPE_UNKNOWN);
+      }
       ABRE_PARENTESES param_list_opt FECHA_PARENTESES
       return_type_opt
       {
-          /* Registra função no escopo global antes de entrar no escopo dela */
-          VarType rt = type_from_string($6 ? $6 : "vazio");
-          if (!sym_insert($2, rt, 1, rt))
-              semantic_error("Linha %d: subprograma '%s' ja declarado", linha_atual, $2);
-          scope_push($2, rt);
+          const char * return_name = $7 ? $7 : "void";
+          VarType return_type = type_from_string(return_name);
+          sym_set_function_return($2, return_type, return_name);
+          scope_set_return_type(return_type, return_name);
       }
       block
       {
           /* ret_c: tipo C de retorno */
-          char * ret_c = $6 ? $6 : "void";
+          char * ret_c = $7 ? $7 : "void";
           /* assinatura: "tipo nome(params)" */
-          char * sig  = cat(ret_c, " ", $2, "(", $4->code);
-          char * body = cat(sig, ")\n{\n", $8->code, "}\n", "");
+          char * sig  = cat(ret_c, " ", $2, "(", $5->code);
+          char * body = cat(sig, ")\n{\n", $9->code, "}\n", "");
           free(sig);
-          free($2); free($6);
-          freeRecord($4); freeRecord($8);
+          free($2); free($7);
+          freeRecord($5); freeRecord($9);
           $$ = createRecord(body, "");
           free(body);
           scope_pop();
@@ -152,7 +214,10 @@ param
       {
           /* ref_opt: "" ou "*" ; array_param_opt ignorado na geração básica */
           char * decl = cat($4, " ", $1, $2, "");
-          sym_insert($2, type_from_string($4), 0, TYPE_VOID);
+          if (!sym_insert($2, type_from_string($4), 0, TYPE_VOID))
+              semantic_error("Linha %d: parametro '%s' ja declarado", linha_atual, $2);
+          else
+              sym_set_declared_type($2, $4);
           free($1); free($2); free($4);
           $$ = createRecord(decl, ""); free(decl);
       }
@@ -175,7 +240,11 @@ type
     | TIPO_REAL     { $$ = strdup("float");  }
     | TIPO_TEXTO    { $$ = strdup("char*");  }
     | TIPO_BOOLEANO { $$ = strdup("int");    }
-    | IDENTIFICADOR { $$ = $1;                 }
+    | IDENTIFICADOR {
+          if (!user_type_lookup($1))
+              semantic_error("Linha %d: tipo '%s' nao declarado", linha_atual, $1);
+          $$ = $1;
+      }
     ;
 
 main_program
@@ -225,6 +294,8 @@ decl
       {
           if (!sym_insert($1, type_from_string($3), 0, TYPE_VOID))
               semantic_error("Linha %d: '%s' ja declarado", linha_atual, $1);
+          else
+              sym_set_declared_type($1, $3);
           char * declaration = cat($3, " ", $1, $4, "");
           char * s = cat(declaration, $5 ? $5 : "", ";\n", "", "");
           free(declaration);
@@ -235,6 +306,8 @@ decl
       {
           if (!sym_insert($2, type_from_string($4), 0, TYPE_VOID))
               semantic_error("Linha %d: '%s' ja declarado", linha_atual, $2);
+          else
+              sym_set_declared_type($2, $4);
           char * s = cat("const ", $4, " ", $2, $5 ? $5 : "");
           char * s2 = cat(s, ";\n", "", "", "");
           free(s); free($2); free($4); free($5);
@@ -268,14 +341,14 @@ assign
       {
           /* Verificação de tipo */
           VarType left_type = type_from_string($1->opt1);
-          if (left_type == TYPE_UNKNOWN) {
+          if (left_type == TYPE_UNKNOWN && strcmp($1->opt1, "desconhecido") == 0) {
               char * base = get_base_name($1->code);
               Symbol * sym = sym_lookup(base);
               if (!sym)
                   semantic_error("Linha %d: '%s' nao declarado", linha_atual, base);
               free(base);
-          } else if (!types_compatible(left_type, type_from_string($3->opt1)) &&
-                     type_from_string($3->opt1) != TYPE_UNKNOWN) {
+          } else if (strcmp($3->opt1, "desconhecido") != 0 &&
+                     !declared_types_compatible($1->opt1, $3->opt1)) {
               char * base = get_base_name($1->code);
               semantic_error("Linha %d: tipos incompativeis em '%s'", linha_atual, base);
               free(base);
@@ -310,7 +383,7 @@ call_expr
           Symbol * sym = sym_lookup($1);
           if (!sym || !sym->is_function)
               semantic_error("Linha %d: '%s' nao e funcao declarada", linha_atual, $1);
-          char * ret_t = sym ? strdup(type_name(sym->return_type)) : strdup("desconhecido");
+          char * ret_t = sym ? strdup(sym->return_declared_type) : strdup("desconhecido");
           char * s = cat($1, "(", $3->code, ")", "");
           free($1); freeRecord($3);
           $$ = createRecord(s, ret_t);
@@ -414,8 +487,8 @@ return_stmt
       {
           ScopeEntry * top = scope_top();
           if (top) {
-              VarType et = type_from_string($2->opt1);
-              if (et != TYPE_UNKNOWN && !types_compatible(top->return_type, et))
+              if (strcmp($2->opt1, "desconhecido") != 0 &&
+                  !declared_types_compatible(top->return_declared_type, $2->opt1))
                   semantic_error("Linha %d: tipo de retorno incompativel", linha_atual);
           }
           char * s = cat("return ", $2->code, ";\n", "", "");
@@ -559,7 +632,7 @@ var
           Symbol * sym = sym_lookup($1);
           if (!sym)
               semantic_error("Linha %d: '%s' nao declarado", linha_atual, $1);
-          char * t = sym ? strdup(type_name(sym->type)) : strdup("desconhecido");
+          char * t = sym ? strdup(sym->declared_type) : strdup("desconhecido");
           $$ = createRecord($1, t);   /* code = nome C, opt1 = tipo */
           /* reuse: code = nome C, opt1 = nome para lookup */
           free(t); free($1);
@@ -569,7 +642,7 @@ var
           Symbol * sym = sym_lookup($1);
           if (!sym)
               semantic_error("Linha %d: '%s' nao declarado", linha_atual, $1);
-          char * t = sym ? strdup(type_name(sym->type)) : strdup("desconhecido");
+          char * t = sym ? strdup(sym->declared_type) : strdup("desconhecido");
           char * s = cat($1, "[", $3->code, "]", "");
           freeRecord($3);
           $$ = createRecord(s, t);
@@ -580,12 +653,13 @@ var
           Symbol * sym = sym_lookup($1);
           if (!sym)
               semantic_error("Linha %d: '%s' nao declarado", linha_atual, $1);
-          VarType field_type = TYPE_UNKNOWN;
-          if (sym && sym->type == TYPE_RATIONAL) {
-              if (strcmp($3, "numerador") == 0 || strcmp($3, "denominador") == 0)
-                  field_type = TYPE_INT;
-          }
-          char * t = field_type != TYPE_UNKNOWN ? strdup(type_name(field_type)) : strdup("desconhecido");
+          TypeField * field = sym ? user_type_field_lookup(sym->declared_type, $3) : NULL;
+          if (sym && sym->type != TYPE_USER_DEFINED)
+              semantic_error("Linha %d: '%s' nao e um registro", linha_atual, $1);
+          else if (sym && !field)
+              semantic_error("Linha %d: campo '%s' nao existe em '%s'",
+                             linha_atual, $3, sym->declared_type);
+          char * t = field ? strdup(field->declared_type) : strdup("desconhecido");
           char * s = cat($1, ".", $3, "", "");
           $$ = createRecord(s, t);
           free(s); free($1); free($3); free(t);

@@ -150,6 +150,7 @@ make problemas
 A linguagem `.edu` é uma linguagem imperativa educacional com sintaxe em português. Ela suporta:
 
 - Declaração de variáveis com tipos explícitos
+- Registros definidos pelo usuário com `tipo Nome inicio ... fim`
 - Estruturas de controle (`se/senao/fim_se`, `enquanto/fim_enquanto`, `repetir/ate`)
 - Definição de `procedimento` e `funcao` com parâmetros por referência (`ref`)
 - Tipo de retorno de funções declarado com o operador `->`
@@ -250,6 +251,7 @@ int yywrap(void) { return 1; }
 | `funcao` | `FUNCAO` | Declaração de função (com retorno) |
 | `retorne` | `RETORNE` | Instrução de retorno de valor |
 | `ref` | `MODIFICADOR_REF` | Passagem de argumento por referência |
+| `tipo` | `TIPO` | Declaração de um registro |
 | `main` | `MAIN` | Procedimento principal |
 
 ### 9.4 Tipos Primitivos
@@ -360,7 +362,7 @@ As principais estruturas validadas pelo analisador incluem:
 
 Um programa válido exige uma lista opcional de subprogramas (procedimentos/funções) seguida obrigatoriamente pelo método principal:
 ```
-program : subprograms main_program ;
+program : type_declarations subprograms main_program ;
 main_program : PROCEDIMENTO MAIN ABRE_PARENTESES FECHA_PARENTESES INICIO stmts FIM ;
 ```
 
@@ -368,6 +370,7 @@ main_program : PROCEDIMENTO MAIN ABRE_PARENTESES FECHA_PARENTESES INICIO stmts F
 
 Valida declarações de variáveis (simples ou vetores) e operações de atribuição:
 ``` 
+type_declaration : TIPO IDENTIFICADOR INICIO field_declarations FIM ;
 decl : IDENTIFICADOR DOIS_PONTOS type array_decl_opt assign_opt ;
 assign : var SINAL_IGUALDADE expr ;
 ```
@@ -448,6 +451,10 @@ gcc exemplo.c -o exemplo
 - `testes/erro_lexico.edu`: Contém um caractere inválido e verifica o bloqueio da saída C.
 
 - `testes/erro_semantico.edu`: Contém uma atribuição incompatível e verifica o bloqueio da saída C.
+
+- `testes/registro.edu`: Declara e utiliza um registro definido pelo usuário.
+
+- `testes/registroERRO.edu`: Tenta acessar um campo inexistente para validar o erro semântico.
 
 ---
 

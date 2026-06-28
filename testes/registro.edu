@@ -1,0 +1,17 @@
+tipo Pessoa inicio
+    nome: Texto
+    idade: Inteiro
+fim
+
+funcao criar_pessoa(nome: Texto, idade: Inteiro) -> Pessoa inicio
+    pessoa: Pessoa
+    pessoa.nome = nome
+    pessoa.idade = idade
+    retorne pessoa
+fim
+
+procedimento main() inicio
+    aluno: Pessoa = criar_pessoa("Ana", 20)
+    Escrever(aluno.nome)
+    Escrever(aluno.idade)
+fim

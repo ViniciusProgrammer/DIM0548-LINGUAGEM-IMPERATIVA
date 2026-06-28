@@ -1,3 +1,8 @@
+tipo rational_t inicio
+    numerador: Inteiro
+    denominador: Inteiro
+fim
+
 funcao mdc(a: Inteiro, b: Inteiro) -> Inteiro
 inicio
     se (a < 0) inicio
@@ -83,11 +88,10 @@ fim
 
 procedimento imprimir_racional(rotulo: Texto, r: rational_t)
 inicio
-    Escrever(rotulo)
-    Escrever(r.numerador)
-    Escrever("/")
+    EscreverSemQuebra(rotulo)
+    EscreverSemQuebra(r.numerador)
+    EscreverSemQuebra("/")
     Escrever(r.denominador)
-    Escrever("")
 fim
 
 procedimento main() inicio
@@ -98,13 +102,12 @@ procedimento main() inicio
     imprimir_racional("a = ", a)
     imprimir_racional("b = ", b)
 
-    Escrever("a == b? ")
+    EscreverSemQuebra("a == b? ")
     se (racionais_iguais(a, b) == Verdadeiro) inicio
         Escrever("Verdadeiro")
     senao inicio
         Escrever("Falso")
     fim_se
-    Escrever("")
 
     imprimir_racional("Soma = ", somar_racionais(a, b))
     imprimir_racional("Negacao de a = ", negar_racional(a))
