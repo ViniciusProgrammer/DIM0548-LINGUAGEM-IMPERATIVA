@@ -39,8 +39,22 @@ fim
 procedimento main() inicio
     numeros: Inteiro[100]
     tamanho: Inteiro
-    cont: Inteiro = 1
+    cont: Inteiro = 0
 
     Escrever("Quantos numeros deseja ordenar (limite de 100)?")
-    tamanho = LerInteiro()
+    Ler(tamanho)
+
+    enquanto (cont < tamanho) inicio
+        Ler(numeros[cont])
+        cont = cont + 1
+    fim_enquanto
+
+    QuickSort(numeros, 0, tamanho - 1)
+
+    Escrever("Vetor ordenado:")
+    cont = 0
+    enquanto (cont < tamanho) inicio
+        Escrever(numeros[cont])
+        cont = cont + 1
+    fim_enquanto
 fim

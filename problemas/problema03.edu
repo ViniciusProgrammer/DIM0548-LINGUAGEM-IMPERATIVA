@@ -71,7 +71,6 @@ procedimento main() inicio
         fim_enquanto
     senao inicio
         Escrever("Soma impossivel: as matrizes possuem dimensoes diferentes.")
-    fim
     fim_se
 
     // Produto: so e possivel se colunasA == linhasB
@@ -97,6 +96,5 @@ procedimento main() inicio
         fim_enquanto
     senao inicio
         Escrever("Produto impossivel: colunas de A diferem das linhas de B.")
-    fim
     fim_se
 fim

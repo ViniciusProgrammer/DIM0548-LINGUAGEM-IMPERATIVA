@@ -12,4 +12,6 @@ analisador_sintatico
 compiler
 prog
 saida.c
-saida/
+saidas/
+diretrizes/
+docs/
