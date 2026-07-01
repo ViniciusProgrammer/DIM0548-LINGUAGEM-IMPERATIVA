@@ -1,73 +1,9 @@
-tipo rational_t inicio
-    numerador: Inteiro
-    denominador: Inteiro
-fim
-
-funcao mdc(a: Inteiro, b: Inteiro) -> Inteiro inicio
-    se (a < 0) inicio
-        a = -a
-    fim_se
-
-    se (b < 0) inicio
-        b = -b
-    fim_se
-
-    se (b == 0) inicio
-        retorne a
-    fim_se
-
-    retorne mdc(b, a % b)
-fim
-
-funcao criar_racional(numerador: Inteiro, denominador: Inteiro) -> rational_t inicio
-    resultado: rational_t
-    divisor: Inteiro = mdc(numerador, denominador)
-
-    resultado.numerador = numerador / divisor
-    resultado.denominador = denominador / divisor
-
-    se (resultado.denominador < 0) inicio
-        resultado.numerador = -resultado.numerador
-        resultado.denominador = -resultado.denominador
-    fim_se
-
-    retorne resultado
-fim
-
-funcao somar_racionais(a: rational_t, b: rational_t) -> rational_t inicio
-    retorne criar_racional(
-        a.numerador * b.denominador + b.numerador * a.denominador,
-        a.denominador * b.denominador
-    )
-fim
-
-funcao subtrair_racionais(a: rational_t, b: rational_t) -> rational_t inicio
-    retorne criar_racional(
-        a.numerador * b.denominador - b.numerador * a.denominador,
-        a.denominador * b.denominador
-    )
-fim
-
-funcao multiplicar_racionais(a: rational_t, b: rational_t) -> rational_t inicio
-    retorne criar_racional(
-        a.numerador * b.numerador,
-        a.denominador * b.denominador
-    )
-fim
-
 procedimento main() inicio
-    x: rational_t = criar_racional(5, 2)
-    y: rational_t = criar_racional(3, 4)
+    x: Real = 5.5
+    y: Real = 2.0
     c: Inteiro = 3
-    resultado: rational_t
 
-    resultado = somar_racionais(
-        subtrair_racionais(multiplicar_racionais(x, x), y),
-        criar_racional(c, 1)
-    )
+    resultado: Real = x * x - y + c
 
-    EscreverSemQuebra("Resultado de x^2 - y + c: ")
-    EscreverSemQuebra(resultado.numerador)
-    EscreverSemQuebra("/")
-    Escrever(resultado.denominador)
+    Escrever(resultado)
 fim
