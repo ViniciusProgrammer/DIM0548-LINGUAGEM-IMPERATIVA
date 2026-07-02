@@ -635,6 +635,15 @@ return_stmt
           freeRecord($2);
           $$ = createRecord(s, ""); free(s);
       }
+    | RETORNE
+      {
+          ScopeEntry * top = scope_top();
+          if (top && top->return_type != TYPE_VOID)
+              semantic_error("Linha %d: funcao deve retornar um valor", linha_atual);
+          
+          char * s = strdup("return;\n");
+          $$ = createRecord(s, ""); free(s);
+      }
     ;
 
 io_stmt
@@ -993,7 +1002,8 @@ char * transform_call_args(const char * function_name, Symbol * function, struct
             if (!declared_types_compatible(param->declared_type, type))
                 semantic_error("Linha %d: argumento %d de '%s' deveria ser %s",
                                linha_atual, count + 1, function_name, param->declared_type);
-            if (param->is_ref && !sym_is_addressable_expression(code))
+            int is_valid_ref = sym_is_addressable_expression(code) || (strncmp(code, "(*", 2) == 0);
+            if (param->is_ref && !is_valid_ref)
                 semantic_error("Linha %d: argumento %d de '%s' deve ser variavel para ref",
                                linha_atual, count + 1, function_name);
         }

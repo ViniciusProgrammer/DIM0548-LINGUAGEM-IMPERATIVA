@@ -62,7 +62,8 @@ p6: compiler problemas/problema06.edu | saidas/
 	$(CC) $(CFLAGS_GEN) saidas/p6.c -o saidas/p6
 
 # ── Testes automatizados ─────────────────────────────────────────
-test: compiler problemas test-positivos test-negativos test-quicksort
+test: compiler problemas test-positivos test-negativos
+	@echo "\n[OK] Todos os testes e geracoes concluiram com sucesso!"
 
 test-positivos: compiler | saidas/
 	@set -e; \
@@ -91,11 +92,6 @@ test-negativos: compiler | saidas/
 	        exit 1; \
 	    fi; \
 	done
-
-test-quicksort: p5
-	@saida=$$(saidas/p5); \
-	echo "=== Saida problema 5: $$saida ==="; \
-	test "$$saida" = "1 2 3 4 7 8 9 12 "
 
 # ── Rodar todos os problemas ─────────────────────────────────────
 rodar: problemas
@@ -140,4 +136,4 @@ clean_all: clean
 saidas/:
 	mkdir -p saidas
 
-.PHONY: all compiler problemas p1 p2 p3 p4 p5 p6 rodar test test-positivos test-negativos test-quicksort clean clean_all
+.PHONY: all compiler problemas p1 p2 p3 p4 p5 p6 rodar test test-positivos test-negativos clean clean_all

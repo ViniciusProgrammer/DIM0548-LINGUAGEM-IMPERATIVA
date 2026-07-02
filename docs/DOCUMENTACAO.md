@@ -670,15 +670,41 @@ void semantic_error(const char *format, ...) {
 [ERRO SEMANTICO] Linha 2: constante 'LIMITE' nao pode ser alterada
 ```
 
+### 8.9 Técnica de Verificação Semântica com Delimitadores não-imprimíveis
+
+Para validar o tipo de parâmetros passados em chamadas de subprogramas aninhados de passagem única, o compilador adota uma técnica de serialização inteligente na regra `arg_list`. As informações de tipo dos argumentos são agrupadas em formato de string na propriedade `record->opt1` utilizando delimitadores não-imprimíveis para evitar colisões:
+
+- `\037` (ASCII 31, Unit Separator) separa o código gerado do argumento do seu tipo inferido.
+- `\036` (ASCII 30, Record Separator) une múltiplos argumentos em uma lista ordenada.
+
+O analisador sintático processa e divide essa cadeia em tokens na função `transform_call_args()`, fazendo a validação estrutural de tipos e assinaturas de funções sem precisar de percursos recursivos em uma AST.
+
 ---
 
 ## 9. Geração de Código C
 
-### 9.1 Estratégia
+### 9.1 Geração de passagem única e Gerenciamento de Memória
 
 A geração é **dirigida pela sintaxe**: cada produção da gramática Bison produz diretamente um fragmento de código C, armazenado no campo `code` do registro associado ao não-terminal. A concatenação dos fragmentos forma o código final.
 
-### 9.2 Cabeçalho gerado automaticamente
+Para evitar vazamentos de memória na análise sintática, todos os registros dinâmicos gerados no Bison são destruídos explicitamente por meio da função `freeRecord(record * r)` assim que suas informações de código (`r->code`) e tipo (`r->opt1`) são transferidas para o nó pai da redução.
+
+compilador suporta recursão legítima em subprogramas que utilizam passagem por referência (`ref`). Para viabilizar esse comportamento, a função `transform_call_args` no `parser.y` valida argumentos internos que assumem a forma desreferenciada `(*id)` em C, reconhecendo esse padrão nativamente como uma expressão endereçável (L-value) válida para o empilhamento seguro de ponteiros. Alinhado a isso, a regra `return_stmt` aceita reduções sem expressões associadas para a palavra-chave `retorne`, garantindo o encerramento e o desempilhamento correto de procedimentos do tipo `void`.
+
+### 9.2 Compilação de Publicação Segura
+
+O arquivo C definitivo não é gravado diretamente. A função `main` do `parser.y` canaliza toda a geração para um arquivo temporário do sistema operacional via `tmpfile()`. No final do processamento, as contagens globais de erros são checadas:
+
+```c
+int analyses_succeeded = parse_result == 0 &&
+                         erros_lexicos == 0 &&
+                         erros_sintaticos == 0 &&
+                         erros_semanticos == 0;
+```
+
+Se a verificação for bem-sucedida, a função `publish_output()` copia de forma segura o fluxo temporário para o destino. Caso contrário, o temporário é destruído sem poluir o diretório de destino com código inacabado.
+
+### 9.3 Cabeçalho gerado automaticamente
 
 Todo arquivo C gerado começa com:
 
@@ -699,7 +725,7 @@ static char *edu_concat(const char *a, const char *b) {
 
 `edu_concat` implementa a concatenação de `Texto + Texto`.
 
-### 9.3 Estruturas de controle — tradução para labels e goto
+### 9.4 Estruturas de controle — tradução para labels e goto
 
 O código gerado **não usa** `if`, `while` ou `for` do C. Todas as estruturas de controle são traduzidas para `goto` e labels, conforme exigido:
 
@@ -749,7 +775,7 @@ goto L1;
 L2:;
 ```
 
-### 9.4 Passagem por referência
+### 9.5 Passagem por referência
 
 | Contexto | `.edu` | C gerado |
 |---|---|---|
@@ -758,7 +784,7 @@ L2:;
 | Chamada | `f(var)` | `f(&var)` |
 | Array como parâmetro | `ref v: Inteiro[]` | `int *v` (decay de array) |
 
-### 9.5 Entrada e saída
+### 9.6 Entrada e saída
 
 ```edu
 Escrever(expr)           → printf("%d\n", (int)(expr));
@@ -770,7 +796,7 @@ Ler(var)                 → scanf("%d", &var);
 
 O formato (`%d`, `%f`, `%s`) é escolhido em tempo de compilação com base no tipo inferido da expressão.
 
-### 9.6 Registros e tipos definidos pelo usuário
+### 9.7 Registros e tipos definidos pelo usuário
 
 ```edu
 tipo Pessoa inicio
@@ -809,7 +835,7 @@ typedef enum {
 } Cor;
 ```
 
-### 9.7 Módulo de labels: `lib/labels.c`
+### 9.8 Módulo de labels: `lib/labels.c`
 
 ```c
 int new_label();        // retorna próximo inteiro (L1, L2, ...)
@@ -818,7 +844,7 @@ char * label_str(int n); // retorna "L42" para n=42
 
 Labels são gerados na ordem de visita das produções, garantindo unicidade global no programa.
 
-### 9.8 Módulo record: `lib/record.c`
+### 9.9 Módulo record: `lib/record.c`
 
 ```c
 typedef struct record {
